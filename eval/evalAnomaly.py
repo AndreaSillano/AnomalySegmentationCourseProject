@@ -129,6 +129,8 @@ def main():
 
     ood_mask = (ood_gts == 1)
     ind_mask = (ood_gts == 0)
+    
+    anomaly_scores = np.array(anomaly_scores)
 
     ood_out = anomaly_scores[ood_mask]
     ind_out = anomaly_scores[ind_mask]
