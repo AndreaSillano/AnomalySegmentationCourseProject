@@ -128,6 +128,7 @@ def main():
     print(ood_gts.shape)
     conf, _  = torch.max(anomaly_scores,dim=1)
     conf = np.array(conf.squeeze(0).cpu())
+    print(conf.shape)
 
     ood_mask = (ood_gts == 1)
     print(ood_mask.shape)
