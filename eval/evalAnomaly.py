@@ -124,10 +124,13 @@ def main():
 
     print("TEST MAX LOGIT")
     #print(anomaly_score_list)
+    print(anomaly_scores.shape)
+    print(ood_gts.shape)
     conf, _  = torch.max(anomaly_scores,dim=1)
     conf = np.array(conf.squeeze(0).cpu())
 
     ood_mask = (ood_gts == 1)
+    print(ood_mask.shape)
     ind_mask = (ood_gts == 0)
 
     ood_out = conf[ood_mask]
