@@ -120,7 +120,7 @@ def main():
     file.write( "\n")
 
     ood_gts = np.array(ood_gts_list)
-    anomaly_scores = np.array(anomaly_score_list)
+    anomaly_scores = torch.tensor(anomaly_score_list)
 
     print("TEST MAX LOGIT")
     print(anomaly_score_list)
