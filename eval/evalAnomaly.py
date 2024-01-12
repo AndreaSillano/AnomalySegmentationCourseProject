@@ -129,11 +129,9 @@ def main():
 
     ood_mask = (ood_gts == 1)
     ind_mask = (ood_gts == 0)
-    
-    anomaly_scores = np.array(anomaly_scores)
 
-    ood_out = anomaly_scores[ood_mask]
-    ind_out = anomaly_scores[ind_mask]
+    ood_out = conf[ood_mask]
+    ind_out = conf[ind_mask]
 
     ood_label = np.ones(len(ood_out))
     ind_label = np.zeros(len(ind_out))
