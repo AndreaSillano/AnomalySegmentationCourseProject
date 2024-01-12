@@ -47,6 +47,7 @@ def main():
     args = parser.parse_args()
     anomaly_score_list = []
     ood_gts_list = []
+    temperature = 1
 
     if not os.path.exists('results.txt'):
         open('results.txt', 'w').close()
