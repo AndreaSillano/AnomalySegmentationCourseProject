@@ -129,22 +129,13 @@ def main():
     file.write( "\n")
 
     ood_gts = np.array(ood_gts_list)
-    anomaly_scores = torch.tensor(anomaly_score_list)
-
-    print("TEST MAX LOGIT")
-    #print(anomaly_score_list)
-    print(anomaly_scores.shape)
-    print(ood_gts.shape)
-    conf, _  = torch.max(anomaly_scores,dim=1)
-    conf = np.array(conf)
-    print(conf.shape)
+    anomaly_scores = np.array(anomaly_score_list)
 
     ood_mask = (ood_gts == 1)
-    print(ood_mask.shape)
     ind_mask = (ood_gts == 0)
 
-    ood_out = conf[ood_mask]
-    ind_out = conf[ind_mask]
+    ood_out = anomaly_scores[ood_mask]
+    ind_out = anomaly_scores[ind_mask]
 
     ood_label = np.ones(len(ood_out))
     ind_label = np.zeros(len(ind_out))
