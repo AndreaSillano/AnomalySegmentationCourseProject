@@ -42,6 +42,7 @@ def main():
     parser.add_argument('--datadir', default="/home/shyam/ViT-Adapter/segmentation/data/cityscapes/")
     parser.add_argument('--num-workers', type=int, default=4)
     parser.add_argument('--batch-size', type=int, default=1)
+    parser.add_argument('--discriminant',default="msp")
     parser.add_argument('--cpu', action='store_true')
     args = parser.parse_args()
     anomaly_score_list = []
@@ -85,7 +86,15 @@ def main():
         images = images.permute(0,3,1,2)
         with torch.no_grad():
             result = model(images)
-        anomaly_result = 1.0 - np.max(result.squeeze(0).data.cpu().numpy(), axis=0)            
+        if (args.discriminant == "maxlogit"):
+          anomaly_result = -(np.max(result.squeeze(0).data.cpu().numpy(), axis=0))
+        if (args.discriminant == "msp"):
+          softmax_probs = torch.nn.functional.softmax(result.squeeze(0) / temperature, dim=0)
+          anomaly_result = 1.0 - (np.max(softmax_probs.data.cpu().numpy(), axis=0))
+        if (args.discriminant == "maxentropy"):
+          max_entropy = (-torch.sum(torch.nn.functional.softmax(result.squeeze(0), dim=0) * torch.nn.functional.log_softmax(result.squeeze(0), dim=0), dim=0))
+          max_entropy = torch.div(max_entropy, torch.log(torch.tensor(result.shape[1])))
+          anomaly_result = max_entropy.data.cpu().numpy()            
         pathGT = path.replace("images", "labels_masks")                
         if "RoadObsticle21" in pathGT:
            pathGT = pathGT.replace("webp", "png")
@@ -127,7 +136,7 @@ def main():
     print(anomaly_scores.shape)
     print(ood_gts.shape)
     conf, _  = torch.max(anomaly_scores,dim=1)
-    conf = np.array(conf.squeeze(0).cpu())
+    conf = np.array(conf)
     print(conf.shape)
 
     ood_mask = (ood_gts == 1)
