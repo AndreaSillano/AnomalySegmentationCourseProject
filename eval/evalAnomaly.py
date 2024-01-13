@@ -48,7 +48,6 @@ def main():
     args = parser.parse_args()
     anomaly_score_list = []
     ood_gts_list = []
-    temperature = 1
 
     if not os.path.exists('results.txt'):
         open('results.txt', 'w').close()
@@ -91,7 +90,7 @@ def main():
         if (args.discriminant == "maxlogit"):
           anomaly_result = -(np.max(result.squeeze(0).data.cpu().numpy(), axis=0))
         if (args.discriminant == "msp"):
-          softmax_probs = torch.nn.functional.softmax(result.squeeze(0) / args.temperature, dim=0)
+          softmax_probs = torch.nn.functional.softmax(result.squeeze(0) / float(args.temperature), dim=0)
           anomaly_result = 1.0 - (np.max(softmax_probs.data.cpu().numpy(), axis=0))
         if (args.discriminant == "maxentropy"):
           max_entropy = (-torch.sum(torch.nn.functional.softmax(result.squeeze(0), dim=0) * torch.nn.functional.log_softmax(result.squeeze(0), dim=0), dim=0))
