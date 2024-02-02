@@ -33,8 +33,8 @@ def image_basename(filename):
 class VOC12(Dataset):
 
     def __init__(self, root, input_transform=None, target_transform=None):
-        self.images_root = os.path.join(root, 'images')
-        self.labels_root = os.path.join(root, 'labels')
+        self.images_root = os.path.join(root, 'images/')
+        self.labels_root = os.path.join(root, 'labels_marks/')
 
         self.filenames = [image_basename(f)
             for f in os.listdir(self.labels_root) if is_image(f)]
