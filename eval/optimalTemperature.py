@@ -14,7 +14,7 @@ from ood_metrics import fpr_at_95_tpr, calc_metrics, plot_roc, plot_pr,plot_barc
 from sklearn.metrics import roc_auc_score, roc_curve, auc, precision_recall_curve, average_precision_score
 from temperature_scaling import ModelWithTemperature
 from torch.utils.data import DataLoader
-from dataset import ValidationDataset
+from dataset import VOC12
 
 seed = 42
 
@@ -85,7 +85,7 @@ def main():
     model.eval()
     model_to_optimize = ModelWithTemperature(model)
     print(args.input[0])
-    dataset = ValidationDataset("Validation_dataset/"+args.input[0], input_transform=None, target_transform=None)
+    dataset = VOC12("eval/Validation_dataset/"+args.input[0], input_transform=None, target_transform=None)
     print(dataset.__len__())
     loader = DataLoader(dataset, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=False)
        
