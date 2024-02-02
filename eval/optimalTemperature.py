@@ -82,7 +82,7 @@ def main():
     model.eval()
     model_to_optimize = ModelWithTemperature(model)
     for path in glob.glob(os.path.expanduser(str(args.input[0]))):
-        print(path)
+        print(f"PATH: {path}")
         images = torch.from_numpy(np.array(Image.open(path).convert('RGB'))).unsqueeze(0).float()
         images = images.permute(0,3,1,2)
         model_to_optimize.set_temperature(images)
