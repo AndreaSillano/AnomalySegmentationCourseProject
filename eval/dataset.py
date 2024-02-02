@@ -46,7 +46,7 @@ class VOC12(Dataset):
     def __getitem__(self, index):
         filename = self.filenames[index]
 
-        with open(image_path(self.images_root, filename, '.jpg'), 'rb') as f:
+        with open(image_path(self.images_root, filename, '.png'), 'rb') as f:
             image = load_image(f).convert('RGB')
         with open(image_path(self.labels_root, filename, '.png'), 'rb') as f:
             label = load_image(f).convert('P')
