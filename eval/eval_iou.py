@@ -90,7 +90,26 @@ def main(args):
         with torch.no_grad():
             outputs = model(inputs)
 
-        iouEvalVal.addBatch(outputs.max(1)[1].unsqueeze(1).data, labels)
+        #iouEvalVal.addBatch(outputs.max(1)[1].unsqueeze(1).data, labels)
+
+        if args.discriminant == 'msp':
+          softmax_output = F.softmax(outputs, dim=1)
+          _, predicted_labels = softmax_output.max(1, keepdim=True)
+          iouEvalVal.addBatch(predicted_labels, labels)
+
+        elif args.discriminant == 'maxentropy':
+          softmax_output = F.softmax(outputs, dim=1)
+          #entropy = -torch.sum(softmax_output * torch.log(softmax_output + 1e-10), dim=1, keepdim=True)
+          entropy = -torch.sum(softmax_output * torch.log2(softmax_output.clamp_min(1e-20)), dim=1, keepdim=True)
+          _, predicted_labels = entropy.max(1, keepdim=True)
+          iouEvalVal.addBatch(predicted_labels, labels)
+
+        elif args.discriminant == 'maxlogit':
+          _, predicted_labels = outputs.max(1, keepdim=True)
+          iouEvalVal.addBatch(predicted_labels, labels)
+
+        else:
+          iouEvalVal.addBatch(outputs.max(1)[1].unsqueeze(1).data, labels)
 
         filenameSave = filename[0].split("leftImg8bit/")[1] 
 
@@ -145,5 +164,6 @@ if __name__ == '__main__':
     parser.add_argument('--num-workers', type=int, default=4)
     parser.add_argument('--batch-size', type=int, default=1)
     parser.add_argument('--cpu', action='store_true')
+    parser.add_argument('--discriminant', default="msp")
 
     main(parser.parse_args())
