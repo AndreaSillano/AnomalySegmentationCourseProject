@@ -89,7 +89,7 @@ def main():
     print(dataset.__len__())
     loader = DataLoader(dataset, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=False)
        
-    model_to_optimize.set_temperature(loader)
+    model_to_optimize.set_temperature(loader, dataset=args.input[0])
     print("Done!")
     #     with torch.no_grad():
     #         result = model(images)
