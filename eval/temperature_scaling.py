@@ -1,7 +1,7 @@
 import torch
 from torch import nn, optim
 from torch.nn import functional as F
-
+import numpy as np 
 
 class ModelWithTemperature(nn.Module):
     """
@@ -29,7 +29,7 @@ class ModelWithTemperature(nn.Module):
         return logits / temperature
 
     # This function probably should live outside of this class, but whatever
-    def set_temperature(self, valid_loader):
+    def set_temperature(self, valid_loader, dataset):
         """
         Tune the tempearature of the model (using the validation set).
         We're going to set it to optimize NLL.
@@ -42,12 +42,59 @@ class ModelWithTemperature(nn.Module):
         # First: collect all the logits and labels for the validation set
         logits_list = []
         labels_list = []
+        anomaly_score_list =[]
+        mask_list = []
         with torch.no_grad():
             for input, label in valid_loader:
                 input = input.cuda()
                 logits = self.model(input)
                 logits_list.append(logits)
-                labels_list.append(label)
+
+                if "RoadAnomaly" in dataset:
+                    ood_gts = np.where((ood_gts==2), 1, ood_gts)
+                if "LostAndFound" in dataset:
+                    ood_gts = np.where((ood_gts==0), 255, ood_gts)
+                    ood_gts = np.where((ood_gts==1), 0, ood_gts)
+                    ood_gts = np.where((ood_gts>1)&(ood_gts<201), 1, ood_gts)
+
+                if "Streethazard" in dataset:
+                    ood_gts = np.where((ood_gts==14), 255, ood_gts)
+                    ood_gts = np.where((ood_gts<20), 0, ood_gts)
+                    ood_gts = np.where((ood_gts==255), 1, ood_gts)
+
+                if 1 not in np.unique(ood_gts):
+                    continue              
+                else:
+                    mask_list.append(ood_gts)
+                    anomaly_score_list.append(logits)
+                #del result, anomaly_result, ood_gts, mask
+                torch.cuda.empty_cache()
+
+
+                ood_gts = np.array(mask_list)
+                anomaly_scores = np.array(logits)
+
+                ood_mask = (ood_gts == 1)
+                ind_mask = (ood_gts == 0)
+
+                ood_out = anomaly_scores[ood_mask]
+                ind_out = anomaly_scores[ind_mask]
+
+                ood_label = np.ones(len(ood_out))
+                ind_label = np.zeros(len(ind_out))
+                
+                val_out = np.concatenate((ind_out, ood_out))
+                lable_out = np.concatenate((ind_label, ood_label))
+
+                logits_list.append(ind_out)
+                logits_list.append(ood_out)
+                labels_list.append(ind_label)
+                labels_list.append(ood_label)
+                #labels_list.append(label)
+                
+
+
+
             logits = torch.cat(logits_list).cuda()
             labels = torch.cat(labels_list).cuda()
 
