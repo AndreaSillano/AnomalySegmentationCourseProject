@@ -2,6 +2,7 @@ import torch
 from torch import nn, optim
 from torch.nn import functional as F
 import numpy as np 
+from PIL import Image
 
 class ModelWithTemperature(nn.Module):
     """
@@ -47,8 +48,13 @@ class ModelWithTemperature(nn.Module):
         with torch.no_grad():
             for input, label in valid_loader:
                 input = input.cuda()
-                logits = self.model(input)
-                logits_list.append(logits)
+                images = torch.from_numpy(np.array(input)).unsqueeze(0).float()
+                images = images.permute(0,3,1,2)
+                logits = self.model(images)
+                #logits_list.append(logits)
+
+                mask = Image.open(label)
+                ood_gts = np.array(mask)
 
                 if "RoadAnomaly" in dataset:
                     ood_gts = np.where((ood_gts==2), 1, ood_gts)
