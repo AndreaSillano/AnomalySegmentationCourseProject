@@ -3,7 +3,7 @@ from torch import nn, optim
 from torch.nn import functional as F
 import numpy as np 
 from PIL import Image
-
+from torch.autograd import Variable
 class ModelWithTemperature(nn.Module):
     """
     A thin decorator, which wraps a model with temperature scaling
@@ -36,26 +36,32 @@ class ModelWithTemperature(nn.Module):
         We're going to set it to optimize NLL.
         valid_loader (DataLoader): validation set loader
         """
+        
         self.cuda()
         nll_criterion = nn.CrossEntropyLoss().cuda()
         ece_criterion = _ECELoss().cuda()
-
+        
         # First: collect all the logits and labels for the validation set
         logits_list = []
         labels_list = []
         anomaly_score_list =[]
         mask_list = []
-        with torch.no_grad():
-            for input, label in valid_loader:
-                input = input.cuda()
-                images = torch.from_numpy(np.array(input)).unsqueeze(0).float()
+
+        for image, label in valid_loader:
+                #input = image.cuda()
+                print(image)
+                print(label)
+                
+                images = torch.from_numpy(np.array(Image.open(image[0]).convert('RGB'))).unsqueeze(0).float()
                 images = images.permute(0,3,1,2)
-                logits = self.model(images)
+                #image = Variable(image)
+                images = images.cuda()
+                with torch.no_grad():
+                  logits = self.model(images)
                 #logits_list.append(logits)
 
-                mask = Image.open(label)
+                mask = Image.open(label[0])
                 ood_gts = np.array(mask)
-
                 if "RoadAnomaly" in dataset:
                     ood_gts = np.where((ood_gts==2), 1, ood_gts)
                 if "LostAndFound" in dataset:
@@ -74,7 +80,7 @@ class ModelWithTemperature(nn.Module):
                     mask_list.append(ood_gts)
                     anomaly_score_list.append(logits)
                 #del result, anomaly_result, ood_gts, mask
-                torch.cuda.empty_cache()
+                #torch.cuda.empty_cache()
 
 
                 ood_gts = np.array(mask_list)
@@ -101,8 +107,8 @@ class ModelWithTemperature(nn.Module):
 
 
 
-            logits = torch.cat(logits_list).cuda()
-            labels = torch.cat(labels_list).cuda()
+        logits = torch.cat(logits_list).cuda()
+        labels = torch.cat(labels_list).cuda()
 
         # Calculate NLL and ECE before temperature scaling
         before_temperature_nll = nll_criterion(logits, labels).item()

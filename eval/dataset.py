@@ -45,17 +45,19 @@ class VOC12(Dataset):
 
     def __getitem__(self, index):
         filename = self.filenames[index]
-
-        with open(image_path(self.images_root, filename, '.png'), 'rb') as f:
-            image = load_image(f).convert('RGB')
-        with open(image_path(self.labels_root, filename, '.png'), 'rb') as f:
-            label = load_image(f).convert('P')
-
+        image = image_path(self.images_root, filename, '.png')
+        #print(image)
+        #with open(image_path(self.images_root, filename, '.png'), 'rb') as f:
+        #    image = load_image(f).convert('RGB')
+        #    print(image)
+        #with open(image_path(self.labels_root, filename, '.png'), 'rb') as f:
+        #    label = load_image(f).convert('P')
+        label =image_path(self.labels_root, filename, '.png')
         if self.input_transform is not None:
             image = self.input_transform(image)
         if self.target_transform is not None:
             label = self.target_transform(label)
-
+        #print(label)
         return image, label
 
     def __len__(self):
