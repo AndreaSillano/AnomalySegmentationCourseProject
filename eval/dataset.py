@@ -101,3 +101,41 @@ class cityscapes(Dataset):
     def __len__(self):
         return len(self.filenames)
 
+class ValidationDataset(Dataset):
+
+    def __init__(self, root, input_transform=None, target_transform=None):
+
+        self.images_root = os.path.join(root, 'images/')
+        self.labels_root = os.path.join(root, 'label_marks/')
+        print(self.images_root, self.labels_root)
+        self.filenames = [os.path.join(dp, f) for dp, dn, fn in os.walk(os.path.expanduser(self.images_root)) for f in fn if is_image(f)]
+        self.filenames.sort()
+
+        self.filenamesGt = [os.path.join(dp, f) for dp, dn, fn in os.walk(os.path.expanduser(self.labels_root)) for f in fn if is_label(f)]
+        
+        self.filenamesGt.sort()
+
+        self.input_transform = input_transform
+        self.target_transform = target_transform
+
+    def __getitem__(self, index):
+        
+        filename = self.filenames[index]
+        filenameGt = self.filenamesGt[index]
+
+        #print(filename)
+
+        with open(image_path_city('', filename), 'rb') as f:
+            image = load_image(f).convert('RGB')
+        with open(image_path_city('', filenameGt), 'rb') as f:
+            label = load_image(f).convert('P')
+
+        if self.input_transform is not None:
+            image = self.input_transform(image)
+        if self.target_transform is not None:
+            label = self.target_transform(label)
+
+        return image, label, filename, filenameGt
+
+    def __len__(self):
+        return len(self.filenames)

@@ -16,9 +16,7 @@ def main():
     print(cityscapesPath)
     searchFine   = os.path.join( cityscapesPath , "gtFine"   , "*" , "*" , "*_gt*_polygons.json" )
     #searchCoarse = os.path.join( cityscapesPath , "gtCoarse" , "*" , "*" , "*_gt*_polygons.json" )
-    searchFinePath = Path(cityscapesPath)
-    print(searchFinePath.exists())
-    print(searchFine)
+
     # search files
     filesFine = glob.glob( searchFine )
     filesFine.sort()
