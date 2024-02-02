@@ -70,11 +70,9 @@ class cityscapes(Dataset):
         self.labels_root = os.path.join(root, 'gtFine/' + subset)
         print(self.images_root, self.labels_root)
         self.filenames = [os.path.join(dp, f) for dp, dn, fn in os.walk(os.path.expanduser(self.images_root)) for f in fn if is_image(f)]
-        print(len(self.filenames))
         self.filenames.sort()
 
         self.filenamesGt = [os.path.join(dp, f) for dp, dn, fn in os.walk(os.path.expanduser(self.labels_root)) for f in fn if is_label(f)]
-        print(len(self.filenamesGt))
         
         self.filenamesGt.sort()
 
