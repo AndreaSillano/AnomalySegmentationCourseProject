@@ -85,7 +85,7 @@ def main():
     model.eval()
     model_to_optimize = ModelWithTemperature(model)
     print(args.input[0])
-    dataset = VOC12("eval/"+args.input[0], input_transform=None, target_transform=None)
+    dataset = VOC12(args.input[0], input_transform=None, target_transform=None)
     print(dataset.__len__())
     loader = DataLoader(dataset, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=False)
        
