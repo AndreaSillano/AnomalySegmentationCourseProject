@@ -85,80 +85,10 @@ def main():
     model.eval()
     model_to_optimize = ModelWithTemperature(model)
     print(args.input[0])
-    #dataset = VOC12(args.input[0], input_transform=None, target_transform=None)
-    #print(dataset.__len__())
-    #loader = DataLoader(dataset, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=False)
-       
+   
     model_to_optimize.set_temperature(None, images_path=args.input[0])
     print("Done!")
-    #     with torch.no_grad():
-    #         result = model(images)
-
-    #     if (args.discriminant == "maxlogit"):
-    #       anomaly_result = -(np.max(result.squeeze(0).data.cpu().numpy(), axis=0))
-    #     if (args.discriminant == "msp"):
-    #       softmax_probs = torch.nn.functional.softmax(result.squeeze(0) / float(args.temperature), dim=0)
-    #       anomaly_result = 1.0 - (np.max(softmax_probs.data.cpu().numpy(), axis=0))
-    #     if (args.discriminant == "maxentropy"):
-    #       max_entropy = (-torch.sum(torch.nn.functional.softmax(result.squeeze(0), dim=0) * torch.nn.functional.log_softmax(result.squeeze(0), dim=0), dim=0))
-    #       max_entropy = torch.div(max_entropy, torch.log(torch.tensor(result.shape[1])))
-    #       anomaly_result = max_entropy.data.cpu().numpy()            
-    #     pathGT = path.replace("images", "labels_masks")                
-    #     if "RoadObsticle21" in pathGT:
-    #        pathGT = pathGT.replace("webp", "png")
-    #     if "fs_static" in pathGT:
-    #        pathGT = pathGT.replace("jpg", "png")                
-    #     if "RoadAnomaly" in pathGT:
-    #        pathGT = pathGT.replace("jpg", "png")  
-
-    #     mask = Image.open(pathGT)
-    #     ood_gts = np.array(mask)
-
-    #     if "RoadAnomaly" in pathGT:
-    #         ood_gts = np.where((ood_gts==2), 1, ood_gts)
-    #     if "LostAndFound" in pathGT:
-    #         ood_gts = np.where((ood_gts==0), 255, ood_gts)
-    #         ood_gts = np.where((ood_gts==1), 0, ood_gts)
-    #         ood_gts = np.where((ood_gts>1)&(ood_gts<201), 1, ood_gts)
-
-    #     if "Streethazard" in pathGT:
-    #         ood_gts = np.where((ood_gts==14), 255, ood_gts)
-    #         ood_gts = np.where((ood_gts<20), 0, ood_gts)
-    #         ood_gts = np.where((ood_gts==255), 1, ood_gts)
-
-    #     if 1 not in np.unique(ood_gts):
-    #         continue              
-    #     else:
-    #          ood_gts_list.append(ood_gts)
-    #          anomaly_score_list.append(anomaly_result)
-    #     del result, anomaly_result, ood_gts, mask
-    #     torch.cuda.empty_cache()
-
-    # file.write( "\n")
-
-    # ood_gts = np.array(ood_gts_list)
-    # anomaly_scores = np.array(anomaly_score_list)
-
-    # ood_mask = (ood_gts == 1)
-    # ind_mask = (ood_gts == 0)
-
-    # ood_out = anomaly_scores[ood_mask]
-    # ind_out = anomaly_scores[ind_mask]
-
-    # ood_label = np.ones(len(ood_out))
-    # ind_label = np.zeros(len(ind_out))
-    
-    # val_out = np.concatenate((ind_out, ood_out))
-    # val_label = np.concatenate((ind_label, ood_label))
-
-    # prc_auc = average_precision_score(val_label, val_out)
-    # fpr = fpr_at_95_tpr(val_out, val_label)
-
-    # print(f'AUPRC score: {prc_auc*100.0}')
-    # print(f'FPR@TPR95: {fpr*100.0}')
-
-    # file.write(('    AUPRC score:' + str(prc_auc*100.0) + '   FPR@TPR95:' + str(fpr*100.0) ))
-    # file.close()
+   
 
 if __name__ == '__main__':
     main()
