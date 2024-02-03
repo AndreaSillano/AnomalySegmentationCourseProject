@@ -1,9 +1,11 @@
 import torch
-from torch import nn, optim
+from torch import is_same_size, nn, optim
 from torch.nn import functional as F
 import numpy as np 
 from PIL import Image
 from torch.autograd import Variable
+import glob
+import os
 class ModelWithTemperature(nn.Module):
     """
     A thin decorator, which wraps a model with temperature scaling
@@ -30,60 +32,63 @@ class ModelWithTemperature(nn.Module):
         return logits / temperature
 
     # This function probably should live outside of this class, but whatever
-    def set_temperature(self, valid_loader, dataset):
+    def set_temperature(self, valid_loader, images_path):
         """
         Tune the tempearature of the model (using the validation set).
         We're going to set it to optimize NLL.
         valid_loader (DataLoader): validation set loader
-        """
         
+        """
         self.cuda()
         nll_criterion = nn.CrossEntropyLoss().cuda()
         ece_criterion = _ECELoss().cuda()
-        
-        # First: collect all the logits and labels for the validation set
-        logits_list = []
-        labels_list = []
+        ood_gts_list =[]
         anomaly_score_list =[]
-        mask_list = []
+        for path in glob.glob(os.path.expanduser(images_path)):
+          print(path)
+          images = torch.from_numpy(np.array(Image.open(path).convert('RGB'))).unsqueeze(0).float()
+          images = images.permute(0,3,1,2).cuda()
+          with torch.no_grad():
+              result = self.model(images)
 
-        for image, label in valid_loader:
-                #input = image.cuda()
-                print(image)
-                print(label)
+          #anomaly_result = result
+          softmax_probs = torch.nn.functional.softmax(result.squeeze(0), dim=0)
+          anomaly_result = 1.0 - (np.max(softmax_probs.data.cpu().numpy(), axis=0))
                 
-                images = torch.from_numpy(np.array(Image.open(image[0]).convert('RGB'))).unsqueeze(0).float()
-                images = images.permute(0,3,1,2)
-                #image = Variable(image)
-                images = images.cuda()
-                with torch.no_grad():
-                  logits = self.model(images)
-                #logits_list.append(logits)
+          pathGT = path.replace("images", "labels_masks")                
+          if "RoadObsticle21" in pathGT:
+            pathGT = pathGT.replace("webp", "png")
+          if "fs_static" in pathGT:
+            pathGT = pathGT.replace("jpg", "png")                
+          if "RoadAnomaly" in pathGT:
+            pathGT = pathGT.replace("jpg", "png")  
 
-                mask = Image.open(label[0])
-                ood_gts = np.array(mask)
-                if "RoadAnomaly" in dataset:
-                    ood_gts = np.where((ood_gts==2), 1, ood_gts)
-                if "LostAndFound" in dataset:
-                    ood_gts = np.where((ood_gts==0), 255, ood_gts)
-                    ood_gts = np.where((ood_gts==1), 0, ood_gts)
-                    ood_gts = np.where((ood_gts>1)&(ood_gts<201), 1, ood_gts)
+          mask = Image.open(pathGT)
+          ood_gts = np.array(mask)
 
-                if "Streethazard" in dataset:
-                    ood_gts = np.where((ood_gts==14), 255, ood_gts)
-                    ood_gts = np.where((ood_gts<20), 0, ood_gts)
-                    ood_gts = np.where((ood_gts==255), 1, ood_gts)
+          if "RoadAnomaly" in pathGT:
+              ood_gts = np.where((ood_gts==2), 1, ood_gts)
+          if "LostAndFound" in pathGT:
+              ood_gts = np.where((ood_gts==0), 255, ood_gts)
+              ood_gts = np.where((ood_gts==1), 0, ood_gts)
+              ood_gts = np.where((ood_gts>1)&(ood_gts<201), 1, ood_gts)
 
-                if 1 not in np.unique(ood_gts):
-                    continue              
-                else:
-                    mask_list.append(ood_gts)
-                    anomaly_score_list.append(logits)
-                #del result, anomaly_result, ood_gts, mask
-                #torch.cuda.empty_cache()
+          if "Streethazard" in pathGT:
+              ood_gts = np.where((ood_gts==14), 255, ood_gts)
+              ood_gts = np.where((ood_gts<20), 0, ood_gts)
+              ood_gts = np.where((ood_gts==255), 1, ood_gts)
+
+          if 1 not in np.unique(ood_gts):
+              continue              
+          else:
+              ood_gts_list.append(ood_gts)
+              anomaly_score_list.append(anomaly_result)
+
+          del result, anomaly_result, ood_gts, mask
+          torch.cuda.empty_cache()
 
 
-        ood_gts = np.array(mask_list)
+        ood_gts = np.array(ood_gts_list)
         anomaly_scores = np.array(anomaly_score_list)
 
         ood_mask = (ood_gts == 1)
@@ -96,20 +101,18 @@ class ModelWithTemperature(nn.Module):
         ind_label = np.zeros(len(ind_out))
         
         val_out = np.concatenate((ind_out, ood_out))
-        lable_out = np.concatenate((ind_label, ood_label))
-
-        logits_list.append(ind_out)
-        logits_list.append(ood_out)
-        labels_list.append(ind_label)
-        labels_list.append(ood_label)
-                #labels_list.append(label)
-                
-
-
-
-        logits = torch.cat(logits_list).cuda()
-        labels = torch.cat(labels_list).cuda()
-
+        val_label = np.concatenate((ind_label, ood_label))
+        
+        val_out = torch.from_numpy(val_out)
+        val_label = torch.from_numpy(val_label)
+        val_out = torch.transpose(val_out.unsqueeze(0), 0, 1).squeeze(0)
+        val_label = torch.transpose(val_label.unsqueeze(0), 0, 1).squeeze(0)
+        print(val_out)
+        #logits = torch.cat(anomaly_score_list).cuda()
+        #labels = torch.cat(val_label).cuda()
+        
+        logits = val_out
+        labels = val_label
         # Calculate NLL and ECE before temperature scaling
         before_temperature_nll = nll_criterion(logits, labels).item()
         before_temperature_ece = ece_criterion(logits, labels).item()

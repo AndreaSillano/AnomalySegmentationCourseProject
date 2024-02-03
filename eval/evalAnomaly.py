@@ -140,6 +140,8 @@ def main():
 
     ood_label = np.ones(len(ood_out))
     ind_label = np.zeros(len(ind_out))
+
+
     
     val_out = np.concatenate((ind_out, ood_out))
     val_label = np.concatenate((ind_label, ood_label))

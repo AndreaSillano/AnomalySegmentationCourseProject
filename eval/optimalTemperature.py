@@ -85,11 +85,11 @@ def main():
     model.eval()
     model_to_optimize = ModelWithTemperature(model)
     print(args.input[0])
-    dataset = VOC12(args.input[0], input_transform=None, target_transform=None)
-    print(dataset.__len__())
-    loader = DataLoader(dataset, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=False)
+    #dataset = VOC12(args.input[0], input_transform=None, target_transform=None)
+    #print(dataset.__len__())
+    #loader = DataLoader(dataset, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=False)
        
-    model_to_optimize.set_temperature(loader, dataset=args.input[0])
+    model_to_optimize.set_temperature(None, images_path=args.input[0])
     print("Done!")
     #     with torch.no_grad():
     #         result = model(images)
