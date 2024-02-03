@@ -83,25 +83,25 @@ class ModelWithTemperature(nn.Module):
                 #torch.cuda.empty_cache()
 
 
-                ood_gts = np.array(mask_list)
-                anomaly_scores = np.array(logits)
+        ood_gts = np.array(mask_list)
+        anomaly_scores = np.array(anomaly_score_list)
 
-                ood_mask = (ood_gts == 1)
-                ind_mask = (ood_gts == 0)
+        ood_mask = (ood_gts == 1)
+        ind_mask = (ood_gts == 0)
 
-                ood_out = anomaly_scores[ood_mask]
-                ind_out = anomaly_scores[ind_mask]
+        ood_out = anomaly_scores[ood_mask]
+        ind_out = anomaly_scores[ind_mask]
 
-                ood_label = np.ones(len(ood_out))
-                ind_label = np.zeros(len(ind_out))
-                
-                val_out = np.concatenate((ind_out, ood_out))
-                lable_out = np.concatenate((ind_label, ood_label))
+        ood_label = np.ones(len(ood_out))
+        ind_label = np.zeros(len(ind_out))
+        
+        val_out = np.concatenate((ind_out, ood_out))
+        lable_out = np.concatenate((ind_label, ood_label))
 
-                logits_list.append(ind_out)
-                logits_list.append(ood_out)
-                labels_list.append(ind_label)
-                labels_list.append(ood_label)
+        logits_list.append(ind_out)
+        logits_list.append(ood_out)
+        labels_list.append(ind_label)
+        labels_list.append(ood_label)
                 #labels_list.append(label)
                 
 
