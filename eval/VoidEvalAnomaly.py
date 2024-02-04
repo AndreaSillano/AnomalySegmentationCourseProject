@@ -8,6 +8,7 @@ import random
 from PIL import Image
 import numpy as np
 from erfnet import ERFNet
+from enet import ENet
 import os.path as osp
 from argparse import ArgumentParser
 from ood_metrics import fpr_at_95_tpr, calc_metrics, plot_roc, plot_pr,plot_barcode
@@ -37,6 +38,7 @@ def main():
     )  
     parser.add_argument('--loadDir',default="../trained_models/")
     parser.add_argument('--loadWeights', default="erfnet_pretrained.pth")
+    parser.add_argument('--model', default = "ErfNet", help= "Choose a model between ErfNet and ENet")
     parser.add_argument('--loadModel', default="enet.py")
     parser.add_argument('--subset', default="val")  #can be val or train (must have labels)
     parser.add_argument('--datadir', default="/home/shyam/ViT-Adapter/segmentation/data/cityscapes/")
@@ -53,32 +55,46 @@ def main():
         open('results.txt', 'w').close()
     file = open('results.txt', 'a')
 
-    modelpath = args.loadDir + args.loadModel
-    weightspath = args.loadDir + args.loadWeights
+    
 
-    print ("Loading model: " + modelpath)
-    print ("Loading weights: " + weightspath)
+    #model = ERFNet(NUM_CLASSES)
+    if args.model == 'ErfNet':
+        model = ERFNet(NUM_CLASSES)
+        modelpath = args.loadDir + args.loadModel
+        weightspath = args.loadDir + "erfnet_pretrained.pth" #args.loadWeights
 
-    model = ERFNet(NUM_CLASSES)
+        print ("Loading model: " + modelpath)
+        print ("Loading weights: " + weightspath)
+        def load_my_state_dict(model, state_dict):  #custom function to load model when not all dict elements
+            own_state = model.state_dict()
+            for name, param in state_dict.items():
+                if name not in own_state:
+                    if name.startswith("module."):
+                        own_state[name.split("module.")[-1]].copy_(param)
+                    else:
+                        print(name, " not loaded")
+                        continue
+                else:
+                    own_state[name].copy_(param)
+            return model
+        model = load_my_state_dict(model, torch.load(weightspath, map_location=lambda storage, loc: storage))
+        
+    elif args.model == 'ENet':
+        model = ENet(NUM_CLASSES)
+        modelpath = args.loadDir + args.loadModel
+        weightspath = args.loadDir + "enet_pretrained.pth" #args.loadWeights
 
+        print ("Loading model: " + modelpath)
+        print ("Loading weights: " + weightspath)
+        state_dict = torch.load(weightspath, map_location=lambda storage, loc: storage)
+        state_dict = {f"module.{k}": v if not k.startswith("module.") else v for k, v in state_dict.items()}
+        model.load_state_dict(state_dict)
+    else:
+        raise ValueError("Cannot find model")
+
+    print ("Model and weights LOADED successfully")
     if (not args.cpu):
         model = torch.nn.DataParallel(model).cuda()
-
-    def load_my_state_dict(model, state_dict):  #custom function to load model when not all dict elements
-        own_state = model.state_dict()
-        for name, param in state_dict.items():
-            if name not in own_state:
-                if name.startswith("module."):
-                    own_state[name.split("module.")[-1]].copy_(param)
-                else:
-                    print(name, " not loaded")
-                    continue
-            else:
-                own_state[name].copy_(param)
-        return model
-
-    model = load_my_state_dict(model, torch.load(weightspath, map_location=lambda storage, loc: storage))
-    print ("Model and weights LOADED successfully")
     model.eval()
     
     for path in glob.glob(os.path.expanduser(str(args.input[0]))):
