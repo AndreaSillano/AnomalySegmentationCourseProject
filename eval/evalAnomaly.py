@@ -8,6 +8,7 @@ import random
 from PIL import Image
 import numpy as np
 from erfnet import ERFNet
+from enet import ENet
 import os.path as osp
 from argparse import ArgumentParser
 from ood_metrics import fpr_at_95_tpr, calc_metrics, plot_roc, plot_pr,plot_barcode
@@ -37,7 +38,7 @@ def main():
     )  
     parser.add_argument('--loadDir',default="../trained_models/")
     parser.add_argument('--loadWeights', default="erfnet_pretrained.pth")
-    parser.add_argument('--loadModel', default="erfnet.py")
+    parser.add_argument('--loadModel', default="enet.py")
     parser.add_argument('--subset', default="val")  #can be val or train (must have labels)
     parser.add_argument('--datadir', default="/home/shyam/ViT-Adapter/segmentation/data/cityscapes/")
     parser.add_argument('--num-workers', type=int, default=4)
@@ -59,7 +60,7 @@ def main():
     print ("Loading model: " + modelpath)
     print ("Loading weights: " + weightspath)
 
-    model = ERFNet(NUM_CLASSES)
+    model = ENet(NUM_CLASSES)
 
     if (not args.cpu):
         model = torch.nn.DataParallel(model).cuda()
