@@ -82,12 +82,12 @@ def main():
     elif args.model == 'ENet':
         model = ENet(NUM_CLASSES)
         modelpath = args.loadDir + args.loadModel
-        weightspath = args.loadDir + "enet_pretrained.pth" #args.loadWeights
+        weightspath = args.loadDir + "enet_pretrained" #args.loadWeights
 
         print ("Loading model: " + modelpath)
         print ("Loading weights: " + weightspath)
-        state_dict = torch.load(weightspath, map_location=lambda storage, loc: storage)
-        state_dict = {f"module.{k}": v if not k.startswith("module.") else v for k, v in state_dict.items()}
+        state_dict = torch.load(weightspath)
+        #state_dict = {f"module.{k}": v if not k.startswith("module.") else v for k, v in state_dict.items()}
         model.load_state_dict(state_dict)
     else:
         raise ValueError("Cannot find model")
