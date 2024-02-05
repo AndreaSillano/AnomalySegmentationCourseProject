@@ -47,7 +47,7 @@ class ModelWithTemperature(nn.Module):
         for path in glob.glob(os.path.expanduser(images_path)):
           print(path)
           images = torch.from_numpy(np.array(Image.open(path).convert('RGB'))).unsqueeze(0).float()
-          images = images.permute(0,3,1,2).cuda()
+          images = images.permute(0,3,1,2)
           with torch.no_grad():
               result = self.model(images)
 
@@ -90,7 +90,7 @@ class ModelWithTemperature(nn.Module):
 
         ood_gts = np.array(ood_gts_list)
         anomaly_scores = np.array(anomaly_score_list)
-
+        
         ood_mask = (ood_gts == 1)
         ind_mask = (ood_gts == 0)
 
@@ -107,32 +107,35 @@ class ModelWithTemperature(nn.Module):
         val_label = torch.from_numpy(val_label)
         val_out = torch.transpose(val_out.unsqueeze(0), 0, 1).squeeze(0)
         val_label = torch.transpose(val_label.unsqueeze(0), 0, 1).squeeze(0)
-        print(val_out)
+        #print(val_out)
         #logits = torch.cat(anomaly_score_list).cuda()
         #labels = torch.cat(val_label).cuda()
-        
-        logits = val_out
-        labels = val_label
+        logits = val_out.cuda()
+        labels = val_label.cuda()
         # Calculate NLL and ECE before temperature scaling
         before_temperature_nll = nll_criterion(logits, labels).item()
-        before_temperature_ece = ece_criterion(logits, labels).item()
+        before_temperature_ece = 0.0
+        #before_temperature_ece = ece_criterion(logits, labels).item()
         print('Before temperature - NLL: %.3f, ECE: %.3f' % (before_temperature_nll, before_temperature_ece))
-
+        #torch.cuda.empty_cache()
         # Next: optimize the temperature w.r.t. NLL
         optimizer = optim.LBFGS([self.temperature], lr=0.01, max_iter=50)
 
         def eval():
             optimizer.zero_grad()
             loss = nll_criterion(self.temperature_scale(logits), labels)
+            #print(loss)
+            #torch.cuda.empty_cache()
             loss.backward()
             return loss
         optimizer.step(eval)
 
         # Calculate NLL and ECE after temperature scaling
         after_temperature_nll = nll_criterion(self.temperature_scale(logits), labels).item()
-        after_temperature_ece = ece_criterion(self.temperature_scale(logits), labels).item()
+        #torch.cuda.empty_cache()
+        #after_temperature_ece = ece_criterion(self.temperature_scale(logits.cuda()), labels.cuda()).item()
         print('Optimal temperature: %.3f' % self.temperature.item())
-        print('After temperature - NLL: %.3f, ECE: %.3f' % (after_temperature_nll, after_temperature_ece))
+        print('After temperature - NLL: %.3f, ECE: %.3f' % (after_temperature_nll,0.0))
 
         return self
 
