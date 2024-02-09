@@ -111,7 +111,11 @@ def main():
         if (args.discriminant == "maxentropy"):
           max_entropy = (-torch.sum(torch.nn.functional.softmax(result.squeeze(0), dim=0) * torch.nn.functional.log_softmax(result.squeeze(0), dim=0), dim=0))
           max_entropy = torch.div(max_entropy, torch.log(torch.tensor(result.shape[1])))
-          anomaly_result = max_entropy.data.cpu().numpy()            
+          anomaly_result = max_entropy.data.cpu().numpy()  
+
+                 
+                 
+        anomaly_result = result.squeeze(0).data.cpu().numpy()[19,:,:]         
         pathGT = path.replace("images", "labels_masks")                
         if "RoadObsticle21" in pathGT:
            pathGT = pathGT.replace("webp", "png")
