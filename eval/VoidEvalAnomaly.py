@@ -100,8 +100,9 @@ def main():
         print ("Loading model: " + modelpath)
         print ("Loading weights: " + weightspath)
         state_dict = torch.load(weightspath)
+        #print(state_dict)
         #state_dict = {f"module.{k}": v if not k.startswith("module.") else v for k, v in state_dict.items()}
-        model.load_state_dict(state_dict['state_dict'])
+        model.load_state_dict(state_dict)
     else:
         raise ValueError("Cannot find model")
 
@@ -115,7 +116,10 @@ def main():
         images = torch.from_numpy(np.array(Image.open(path).convert('RGB'))).unsqueeze(0).float()
         images = images.permute(0,3,1,2)
         with torch.no_grad():
-            result = model(images)
+            if args.model == 'BiseNet':
+              result = model(images)[0]
+            else:  
+              result = model(images)
         if (args.discriminant == "maxlogit"):
           anomaly_result = -(np.max(result.squeeze(0).data.cpu().numpy(), axis=0))
         if (args.discriminant == "msp"):
