@@ -9,10 +9,13 @@ from PIL import Image
 import numpy as np
 from erfnet import ERFNet
 from enet import ENet
+from bisenetv1 import BiSeNetV1
 import os.path as osp
 from argparse import ArgumentParser
 from ood_metrics import fpr_at_95_tpr, calc_metrics, plot_roc, plot_pr,plot_barcode
 from sklearn.metrics import roc_auc_score, roc_curve, auc, precision_recall_curve, average_precision_score
+
+
 
 seed = 42
 
@@ -88,7 +91,17 @@ def main():
         print ("Loading weights: " + weightspath)
         state_dict = torch.load(weightspath)
         #state_dict = {f"module.{k}": v if not k.startswith("module.") else v for k, v in state_dict.items()}
-        model.load_state_dict(state_dict)
+        model.load_state_dict(state_dict['state_dict'])
+    elif args.model == 'BiseNet':
+        model = BiSeNetV1(NUM_CLASSES)
+        modelpath = args.loadDir + args.loadModel
+        weightspath = args.loadDir + "bisenetv1_cityscapes.pth" #args.loadWeights
+
+        print ("Loading model: " + modelpath)
+        print ("Loading weights: " + weightspath)
+        state_dict = torch.load(weightspath)
+        #state_dict = {f"module.{k}": v if not k.startswith("module.") else v for k, v in state_dict.items()}
+        model.load_state_dict(state_dict['state_dict'])
     else:
         raise ValueError("Cannot find model")
 
