@@ -90,7 +90,6 @@ def main():
         print ("Loading model: " + modelpath)
         print ("Loading weights: " + weightspath)
         state_dict = torch.load(weightspath)
-        #state_dict = {f"module.{k}": v if not k.startswith("module.") else v for k, v in state_dict.items()}
         model.load_state_dict(state_dict['state_dict'])
     elif args.model == 'BiseNet':
         model = BiSeNetV1(NUM_CLASSES)
@@ -100,8 +99,6 @@ def main():
         print ("Loading model: " + modelpath)
         print ("Loading weights: " + weightspath)
         state_dict = torch.load(weightspath)
-        #print(state_dict)
-        #state_dict = {f"module.{k}": v if not k.startswith("module.") else v for k, v in state_dict.items()}
         model.load_state_dict(state_dict)
     else:
         raise ValueError("Cannot find model")
@@ -132,7 +129,7 @@ def main():
 
                  
                  
-        anomaly_result = result.squeeze(0).data.cpu().numpy()[19,:,:]         
+        anomaly_result = result.squeeze(0).data.cpu().numpy()[19,:,:] #Remove background
         pathGT = path.replace("images", "labels_masks")                
         if "RoadObsticle21" in pathGT:
            pathGT = pathGT.replace("webp", "png")
