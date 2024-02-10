@@ -48,7 +48,8 @@ def main():
     args = parser.parse_args()
     anomaly_score_list = []
     ood_gts_list = []
-
+    
+   
     if not os.path.exists('results.txt'):
         open('results.txt', 'w').close()
     file = open('results.txt', 'a')
@@ -82,21 +83,28 @@ def main():
     model.eval()
     
     for path in glob.glob(os.path.expanduser(str(args.input[0]))):
-        print(path)
+        #print(path)
         images = torch.from_numpy(np.array(Image.open(path).convert('RGB'))).unsqueeze(0).float()
         images = images.permute(0,3,1,2)
         with torch.no_grad():
             result = model(images)
         if (args.discriminant == "maxlogit"):
+          title_discrimant = "Max Logit"
           anomaly_result = -(np.max(result.squeeze(0).data.cpu().numpy(), axis=0))
-        if (args.discriminant == "msp"):
+        elif (args.discriminant == "msp"):
+          title_discrimant = "MSP"
           softmax_probs = torch.nn.functional.softmax(result.squeeze(0) / float(args.temperature), dim=0)
           anomaly_result = 1.0 - (np.max(softmax_probs.data.cpu().numpy(), axis=0))
-        if (args.discriminant == "maxentropy"):
+        elif (args.discriminant == "maxentropy"):
+          title_discrimant = "Max Entrpy"
           max_entropy = (-torch.sum(torch.nn.functional.softmax(result.squeeze(0), dim=0) * torch.nn.functional.log_softmax(result.squeeze(0), dim=0), dim=0))
           max_entropy = torch.div(max_entropy, torch.log(torch.tensor(result.shape[1])))
-          anomaly_result = max_entropy.data.cpu().numpy()            
-        pathGT = path.replace("images", "labels_masks")                
+          anomaly_result = max_entropy.data.cpu().numpy()          
+        else:
+            raise ValueError("Discriminant not found") 
+        
+        pathGT = path.replace("images", "labels_masks")    
+        
         if "RoadObsticle21" in pathGT:
            pathGT = pathGT.replace("webp", "png")
         if "fs_static" in pathGT:
@@ -128,7 +136,20 @@ def main():
         torch.cuda.empty_cache()
 
     file.write( "\n")
+    path = args.input[0]
+    dataset = ""
+    if "RoadAnomaly21" in path:
+        dataset = "RoadAnomaly21"
+    if "RoadObsticle21" in path:
+        dataset = "RoadObsticle21"
+    if "FS_LostFound_full" in path:
+        dataset = "FS_LostFound_full"
+    if "fs_static" in path:
+        dataset = "fs_static"
+    if "RoadAnomaly" in path:
+        dataset = "RoadAnomaly"
 
+    
     ood_gts = np.array(ood_gts_list)
     anomaly_scores = np.array(anomaly_score_list)
 
@@ -148,10 +169,10 @@ def main():
 
     prc_auc = average_precision_score(val_label, val_out)
     fpr = fpr_at_95_tpr(val_out, val_label)
-
+    print(f"{dataset}-{title_discrimant}")
     print(f'AUPRC score: {prc_auc*100.0}')
     print(f'FPR@TPR95: {fpr*100.0}')
-
+    file.write((f"                         {dataset}-{title_discrimant}                   "))
     file.write(('    AUPRC score:' + str(prc_auc*100.0) + '   FPR@TPR95:' + str(fpr*100.0) ))
     file.close()
 
