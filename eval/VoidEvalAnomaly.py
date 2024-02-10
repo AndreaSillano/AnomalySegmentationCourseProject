@@ -201,7 +201,7 @@ def main():
     print(f"{dataset}-{model_name}")
     print(f'AUPRC score: {prc_auc*100.0}')
     print(f'FPR@TPR95: {fpr*100.0}')
-    file.write((f"                 {dataset}-{model_name}-temperature:{args.temperature}        "))ù
+    file.write((f"                 {dataset}-{model_name}-temperature:{args.temperature}        "))
     file.write(('    AUPRC score:' + str(prc_auc*100.0) + '   FPR@TPR95:' + str(fpr*100.0) ))
     file.close()
 
