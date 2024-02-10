@@ -8,8 +8,8 @@ import random
 from PIL import Image
 import numpy as np
 from erfnet import ERFNet
-from enet import ENet
-from bisenetv1 import BiSeNetV1
+from eval.addtionalModels.enet import ENet
+from eval.addtionalModels.bisenetv1 import BiSeNetV1
 import os.path as osp
 from argparse import ArgumentParser
 from ood_metrics import fpr_at_95_tpr, calc_metrics, plot_roc, plot_pr,plot_barcode

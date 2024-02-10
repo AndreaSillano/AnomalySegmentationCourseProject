@@ -172,7 +172,7 @@ def main():
     print(f"{dataset}-{title_discrimant}")
     print(f'AUPRC score: {prc_auc*100.0}')
     print(f'FPR@TPR95: {fpr*100.0}')
-    file.write((f"                         {dataset}-{title_discrimant}                   "))
+    file.write((f"                 {dataset}-{title_discrimant}-{args.temperature}        "))
     file.write(('    AUPRC score:' + str(prc_auc*100.0) + '   FPR@TPR95:' + str(fpr*100.0) ))
     file.close()
 
