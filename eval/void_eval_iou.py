@@ -139,25 +139,21 @@ def main(args):
         if args.discriminant == 'msp':
           softmax_output = F.softmax(outputs, dim=1)
           _, predicted_labels = softmax_output.max(1, keepdim=True)
-          #iouEvalVal.addBatch(predicted_labels, labels)
+          iouEvalVal.addBatch(predicted_labels, labels)
 
         elif args.discriminant == 'maxentropy':
           softmax_output = F.softmax(outputs, dim=1)
           #entropy = -torch.sum(softmax_output * torch.log(softmax_output + 1e-10), dim=1, keepdim=True)
           entropy = -torch.sum(softmax_output * torch.log2(softmax_output.clamp_min(1e-20)), dim=1, keepdim=True)
           _, predicted_labels = entropy.max(1, keepdim=True)
-          #iouEvalVal.addBatch(predicted_labels, labels)
+          iouEvalVal.addBatch(predicted_labels, labels)
 
         elif args.discriminant == 'maxlogit':
           _, predicted_labels = outputs.max(1, keepdim=True)
-          #iouEvalVal.addBatch(predicted_labels, labels)
+          iouEvalVal.addBatch(predicted_labels, labels)
 
         else:
-          #iouEvalVal.addBatch(outputs.max(1)[1].unsqueeze(1).data, labels)
-           predicted_labels = outputs.max(1)[1].unsqueeze(1).data
-
-        anomaly = predicted_labels.squeeze(0).data.cpu().numpy()[19,:,:] #background as anomaly
-        iouEvalVal.addBatch(anomaly, labels)
+          iouEvalVal.addBatch(outputs.max(1)[1].unsqueeze(1).data, labels)
 
         filenameSave = filename[0].split("leftImg8bit/")[1] 
 
