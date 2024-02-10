@@ -129,7 +129,7 @@ def main():
 
                  
                  
-        anomaly_result = result.squeeze(0).data.cpu().numpy()[19,:,:] #Remove background
+        anomaly_result = result.squeeze(0).data.cpu().numpy()[19,:,:] # background as anomaly
         pathGT = path.replace("images", "labels_masks")                
         if "RoadObsticle21" in pathGT:
            pathGT = pathGT.replace("webp", "png")
