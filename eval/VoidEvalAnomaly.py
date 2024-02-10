@@ -62,6 +62,7 @@ def main():
 
     #model = ERFNet(NUM_CLASSES)
     if args.model == 'ErfNet':
+        model_name = 'ErfNet'
         model = ERFNet(NUM_CLASSES)
         modelpath = args.loadDir + args.loadModel
         weightspath = args.loadDir + "erfnet_pretrained.pth" #args.loadWeights
@@ -83,6 +84,7 @@ def main():
         model = load_my_state_dict(model, torch.load(weightspath, map_location=lambda storage, loc: storage))
         
     elif args.model == 'ENet':
+        model_name = 'ENet'
         model = ENet(NUM_CLASSES)
         modelpath = args.loadDir + args.loadModel
         weightspath = args.loadDir + "enet_pretrained" #args.loadWeights
@@ -92,6 +94,7 @@ def main():
         state_dict = torch.load(weightspath)
         model.load_state_dict(state_dict['state_dict'])
     elif args.model == 'BiseNet':
+        model_name = 'BiseNet'
         model = BiSeNetV1(NUM_CLASSES)
         modelpath = args.loadDir + args.loadModel
         weightspath = args.loadDir + "bisenetv1_cityscapes.pth" #args.loadWeights
@@ -109,7 +112,6 @@ def main():
     model.eval()
     
     for path in glob.glob(os.path.expanduser(str(args.input[0]))):
-        print(path)
         images = torch.from_numpy(np.array(Image.open(path).convert('RGB'))).unsqueeze(0).float()
         images = images.permute(0,3,1,2)
         with torch.no_grad():
@@ -163,6 +165,19 @@ def main():
 
     file.write( "\n")
 
+    path = args.input[0]
+    dataset = ""
+    if "RoadAnomaly21" in path:
+        dataset = "RoadAnomaly21"
+    elif "RoadObsticle21" in path:
+        dataset = "RoadObsticle21"
+    elif "FS_LostFound_full" in path:
+        dataset = "FS_LostFound_full"
+    elif "fs_static" in path:
+        dataset = "fs_static"
+    elif "RoadAnomaly" in path:
+        dataset = "RoadAnomaly"
+
     ood_gts = np.array(ood_gts_list)
     anomaly_scores = np.array(anomaly_score_list)
 
@@ -183,9 +198,10 @@ def main():
     prc_auc = average_precision_score(val_label, val_out)
     fpr = fpr_at_95_tpr(val_out, val_label)
 
+    print(f"{dataset}-{model_name}")
     print(f'AUPRC score: {prc_auc*100.0}')
     print(f'FPR@TPR95: {fpr*100.0}')
-
+    file.write((f"                 {dataset}-{model_name}-temperature:{args.temperature}        "))ù
     file.write(('    AUPRC score:' + str(prc_auc*100.0) + '   FPR@TPR95:' + str(fpr*100.0) ))
     file.close()
 

@@ -140,13 +140,13 @@ def main():
     dataset = ""
     if "RoadAnomaly21" in path:
         dataset = "RoadAnomaly21"
-    if "RoadObsticle21" in path:
+    elif "RoadObsticle21" in path:
         dataset = "RoadObsticle21"
-    if "FS_LostFound_full" in path:
+    elif "FS_LostFound_full" in path:
         dataset = "FS_LostFound_full"
-    if "fs_static" in path:
+    elif "fs_static" in path:
         dataset = "fs_static"
-    if "RoadAnomaly" in path:
+    elif "RoadAnomaly" in path:
         dataset = "RoadAnomaly"
 
     
@@ -169,10 +169,10 @@ def main():
 
     prc_auc = average_precision_score(val_label, val_out)
     fpr = fpr_at_95_tpr(val_out, val_label)
-    print(f"{dataset}-{title_discrimant}")
+    print(f"{dataset}-{title_discrimant}-temperature:{args.temperature}")
     print(f'AUPRC score: {prc_auc*100.0}')
     print(f'FPR@TPR95: {fpr*100.0}')
-    file.write((f"                 {dataset}-{title_discrimant}-{args.temperature}        "))
+    file.write((f"                 {dataset}-{title_discrimant}-temperature:{args.temperature}        "))
     file.write(('    AUPRC score:' + str(prc_auc*100.0) + '   FPR@TPR95:' + str(fpr*100.0) ))
     file.close()
 
