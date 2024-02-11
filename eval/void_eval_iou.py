@@ -105,7 +105,7 @@ def main(args):
     loader = DataLoader(cityscapes(args.datadir, input_transform_cityscapes, target_transform_cityscapes, subset=args.subset), num_workers=args.num_workers, batch_size=args.batch_size, shuffle=False)
 
 
-    iouEvalVal = iouEval(NUM_CLASSES)
+    iouEvalVal = iouEval(NUM_CLASSES, ignoreIndex=19)
 
     start = time.time()
 
@@ -121,30 +121,11 @@ def main(args):
             else:  
               outputs = model(inputs)
 
-        #iouEvalVal.addBatch(outputs.max(1)[1].unsqueeze(1).data, labels)
-
-        if args.discriminant == 'msp':
-          softmax_output = F.softmax(outputs, dim=1)
-          _, predicted_labels = softmax_output.max(1, keepdim=True)
-          iouEvalVal.addBatch(predicted_labels, labels)
-
-        elif args.discriminant == 'maxentropy':
-          softmax_output = F.softmax(outputs, dim=1)
-          #entropy = -torch.sum(softmax_output * torch.log(softmax_output + 1e-10), dim=1, keepdim=True)
-          entropy = -torch.sum(softmax_output * torch.log2(softmax_output.clamp_min(1e-20)), dim=1, keepdim=True)
-          _, predicted_labels = entropy.max(1, keepdim=True)
-          iouEvalVal.addBatch(predicted_labels, labels)
-
-        elif args.discriminant == 'maxlogit':
-          _, predicted_labels = outputs.max(1, keepdim=True)
-          iouEvalVal.addBatch(predicted_labels, labels)
-
-        else:
-          iouEvalVal.addBatch(outputs.max(1)[1].unsqueeze(1).data, labels)
+        iouEvalVal.addBatch(outputs.max(1)[1].unsqueeze(1).data, labels)
 
         filenameSave = filename[0].split("leftImg8bit/")[1] 
 
-        print (step, filenameSave)
+       #print (step, filenameSave)
 
 
     iouVal, iou_classes = iouEvalVal.getIoU()
