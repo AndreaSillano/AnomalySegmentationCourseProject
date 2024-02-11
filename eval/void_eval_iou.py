@@ -12,8 +12,8 @@ import time
 
 from PIL import Image
 from argparse import ArgumentParser
-from eval.addtionalModels.enet import ENet
-from eval.addtionalModels.bisenetv1 import BiSeNetV1
+from addtionalModels.enet import ENet
+from addtionalModels.bisenetv1 import BiSeNetV1
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, CenterCrop, Normalize, Resize
