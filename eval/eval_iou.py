@@ -99,8 +99,8 @@ def main(args):
 
         elif args.discriminant == 'maxentropy':
           softmax_output = F.softmax(outputs, dim=1)
-          #entropy = -torch.sum(softmax_output * torch.log(softmax_output + 1e-10), dim=1, keepdim=True)
-          entropy = -torch.sum(softmax_output * torch.log2(softmax_output.clamp_min(1e-20)), dim=1, keepdim=True)
+          entropy = -torch.sum(softmax_output * torch.log(softmax_output + 1e-10), dim=1, keepdim=True)
+          #entropy = -torch.sum(softmax_output * torch.log2(softmax_output.clamp_min(1e-20)), dim=1, keepdim=True)
           _, predicted_labels = entropy.max(1, keepdim=True)
           iouEvalVal.addBatch(predicted_labels, labels)
 

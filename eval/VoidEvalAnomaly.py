@@ -8,8 +8,8 @@ import random
 from PIL import Image
 import numpy as np
 from erfnet import ERFNet
-from eval.addtionalModels.enet import ENet
-from eval.addtionalModels.bisenetv1 import BiSeNetV1
+from addtionalModels.enet import ENet
+from addtionalModels.bisenetv1 import BiSeNetV1
 import os.path as osp
 from argparse import ArgumentParser
 from ood_metrics import fpr_at_95_tpr, calc_metrics, plot_roc, plot_pr,plot_barcode
@@ -47,7 +47,7 @@ def main():
     parser.add_argument('--datadir', default="/home/shyam/ViT-Adapter/segmentation/data/cityscapes/")
     parser.add_argument('--num-workers', type=int, default=4)
     parser.add_argument('--batch-size', type=int, default=1)
-    parser.add_argument('--discriminant',default="msp")
+    parser.add_argument('--discriminant',default=None)
     parser.add_argument('--cpu', action='store_true')
     parser.add_argument('--temperature', default=1)
     args = parser.parse_args()
@@ -119,17 +119,18 @@ def main():
               result = model(images)[0]
             else:  
               result = model(images)
+        
         if (args.discriminant == "maxlogit"):
           anomaly_result = -(np.max(result.squeeze(0).data.cpu().numpy(), axis=0))
-        if (args.discriminant == "msp"):
+        elif (args.discriminant == "msp"):
           softmax_probs = torch.nn.functional.softmax(result.squeeze(0) / float(args.temperature), dim=0)
           anomaly_result = 1.0 - (np.max(softmax_probs.data.cpu().numpy(), axis=0))
-        if (args.discriminant == "maxentropy"):
+        elif (args.discriminant == "maxentropy"):
           max_entropy = (-torch.sum(torch.nn.functional.softmax(result.squeeze(0), dim=0) * torch.nn.functional.log_softmax(result.squeeze(0), dim=0), dim=0))
           max_entropy = torch.div(max_entropy, torch.log(torch.tensor(result.shape[1])))
           anomaly_result = max_entropy.data.cpu().numpy()  
-
-                 
+        else: 
+          anomaly_result = result.squeeze(0)    
                  
         anomaly_result = result.squeeze(0).data.cpu().numpy()[19,:,:] # background as anomaly
         pathGT = path.replace("images", "labels_masks")                
