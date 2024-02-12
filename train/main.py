@@ -19,7 +19,7 @@ from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, CenterCrop, Normalize, Resize, Pad
 from torchvision.transforms import ToTensor, ToPILImage
 
-from dataset import VOC12,cityscapes
+from dataset import VOC12,cityscapes, camvid
 from transform import Relabel, ToLabel, Colorize
 from visualize import Dashboard
 
@@ -504,4 +504,7 @@ if __name__ == '__main__':
     parser.add_argument('--iouVal', action='store_true', default=True)  
     parser.add_argument('--resume', action='store_true')    #Use this flag to load last checkpoint for training  
 
-    main(parser.parse_args())
+    dataset_train = camvid(parser.parse_args().datadir)
+    dataset_val = camvid(parser.parse_args().datadir, None, 'val')
+    print(dataset_train.__len__())
+   # main(parser.parse_args())
