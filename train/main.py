@@ -19,7 +19,7 @@ from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, CenterCrop, Normalize, Resize, Pad
 from torchvision.transforms import ToTensor, ToPILImage
 
-from dataset import VOC12,cityscapes, camvid
+from dataset import VOC12 ,cityscapes, camvid
 from transform import Relabel, ToLabel, Colorize
 from visualize import Dashboard
 
@@ -81,13 +81,22 @@ class CrossEntropyLoss2d(torch.nn.Module):
     def forward(self, outputs, targets):
         return self.loss(torch.nn.functional.log_softmax(outputs, dim=1), targets)
 
+def train_wrapper(args, model, enc=False): 
+    assert os.path.exists(args.datadir), "Error: datadir (dataset directory) could not be loaded"
+    co_transform = MyCoTransform(enc, augment=True, height=args.height)#1024)
+    co_transform_val = MyCoTransform(enc, augment=False, height=args.height)#1024)
+    dataset_train_cityscapes = cityscapes(args.datadir, co_transform, 'train')
+    dataset_val_cityscapes = cityscapes(args.datadir, co_transform_val, 'val')
+    dataset_train_camvid = camvid(args.datadir, co_transform, 'train')
+    dataset_val_camvid= camvid(args.datadir, co_transform_val, 'val')
 
-def train(args, model, enc=False):
-    best_acc = 0
 
-    #TODO: calculate weights by processing dataset histogram (now its being set by hand from the torch values)
-    #create a loder to run all images and calculate histogram of labels, then create weight array using class balancing
+    weight = init_weight(enc)
+    model = train(args, model, weight, dataset_train_cityscapes, dataset_val_cityscapes,enc)
+    model = train(args, model, None, dataset_train_camvid, dataset_val_camvid,enc)
 
+
+def init_weight(enc):
     weight = torch.ones(NUM_CLASSES)
     if (enc):
         weight[0] = 2.3653597831726	
@@ -131,18 +140,36 @@ def train(args, model, enc=False):
         weight[18] = 10.138095855713	
 
     weight[19] = 0
+def train(args, model, weight,dataset_train,dataset_val, enc=False):
+    best_acc = 0
 
-    assert os.path.exists(args.datadir), "Error: datadir (dataset directory) could not be loaded"
+    #TODO: calculate weights by processing dataset histogram (now its being set by hand from the torch values)
+    #create a loder to run all images and calculate histogram of labels, then create weight array using class balancing
+    if weight == None:
+        pass
+        #weight = torch.ones(NUM_CLASSES)
+        #for i in range(0,20):
+            
+    '''if weight == None:
+        if (enc):
+            filename = f'{savedir}/model_encoder-{epoch:03}.pth'
+            filenamebest = f'{savedir}/model_encoder_best.pth'
+        else:
+            filename = f'{savedir}/model-{epoch:03}.pth'
+            filenamebest = f'{savedir}/model_best.pth'
 
-    co_transform = MyCoTransform(enc, augment=True, height=args.height)#1024)
-    co_transform_val = MyCoTransform(enc, augment=False, height=args.height)#1024)
-    dataset_train = cityscapes(args.datadir, co_transform, 'train')
-    dataset_val = cityscapes(args.datadir, co_transform_val, 'val')
-
+        assert os.path.exists(filenameBest), "Error: resume option was used but checkpoint was not found in folder"
+        checkpoint = torch.load(filenameBest)
+        start_epoch = checkpoint['epoch']
+        model.load_state_dict(checkpoint['state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer'])
+        best_acc = checkpoint['best_acc']
+        print("=> Loaded checkpoint at epoch {})".format(checkpoint['epoch']))
+    ''' 
     loader = DataLoader(dataset_train, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=True)
     loader_val = DataLoader(dataset_val, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=False)
 
-    if args.cuda:
+    if args.cuda and weight != None:
         weight = weight.cuda()
     criterion = CrossEntropyLoss2d(weight)
     print(type(criterion))
@@ -167,9 +194,12 @@ def train(args, model, enc=False):
     #TODO: reduce memory in first gpu: https://discuss.pytorch.org/t/multi-gpu-training-memory-usage-in-balance/4163/4        #https://github.com/pytorch/pytorch/issues/1893
 
     #optimizer = Adam(model.parameters(), 5e-4, (0.9, 0.999),  eps=1e-08, weight_decay=2e-4)     ## scheduler 1
+    
+        
     optimizer = Adam(model.parameters(), 5e-4, (0.9, 0.999),  eps=1e-08, weight_decay=1e-4)      ## scheduler 2
 
     start_epoch = 1
+
     if args.resume:
         #Must load weights, optimizer, epoch and best value. 
         if enc:
