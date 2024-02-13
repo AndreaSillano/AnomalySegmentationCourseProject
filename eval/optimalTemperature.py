@@ -13,12 +13,13 @@ from argparse import ArgumentParser
 from ood_metrics import fpr_at_95_tpr, calc_metrics, plot_roc, plot_pr,plot_barcode
 from sklearn.metrics import roc_auc_score, roc_curve, auc, precision_recall_curve, average_precision_score
 from temperature_scaling import ModelWithTemperature
-from dataset import cityscapes
+from dataset import cityscapesTemperature
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision.transforms import ToTensor, ToPILImage
 from torchvision.transforms import Compose, CenterCrop, Normalize, Resize
 from dataset import VOC12
+from transform import Relabel, ToLabel, Colorize
 
 seed = 42
 
@@ -86,16 +87,24 @@ def main():
 
     model = load_my_state_dict(model, torch.load(weightspath, map_location=lambda storage, loc: storage))
     print ("Model and weights LOADED successfully")
-    
+    model.eval()
     model_to_optimize = ModelWithTemperature(model)
     print(args.input[0])
-    
-    dataset_val_cityscapes = cityscapes(args.datadir,  None,  'val')
-    loader = DataLoader(dataset_val_cityscapes, num_workers=4, batch_size=6, shuffle=True)
+  
+    input_transform = transforms.Compose([
+        transforms.Resize((256, 256)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
+    target_transform = transforms.Compose([
+        transforms.Resize((256, 256), interpolation=Image.NEAREST),
+        transforms.ToTensor()
+    ])
+    dataset_val_cityscapes = cityscapesTemperature("../dataset/Cityscapes", input_transform, target_transform , subset='val')
+    loader = DataLoader(dataset_val_cityscapes, num_workers=4, batch_size=1, shuffle=False)
 
    
     model_to_optimize.set_temperature(loader)
-    model.eval()
     print("Done!")
    
 
