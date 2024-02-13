@@ -86,15 +86,16 @@ def main():
 
     model = load_my_state_dict(model, torch.load(weightspath, map_location=lambda storage, loc: storage))
     print ("Model and weights LOADED successfully")
-    model.eval()
+    
     model_to_optimize = ModelWithTemperature(model)
     print(args.input[0])
-  
+    
     dataset_val_cityscapes = cityscapes(args.datadir,  None,  'val')
     loader = DataLoader(dataset_val_cityscapes, num_workers=4, batch_size=6, shuffle=True)
 
    
     model_to_optimize.set_temperature(loader)
+    model.eval()
     print("Done!")
    
 
