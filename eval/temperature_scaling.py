@@ -1,11 +1,8 @@
 import torch
-from torch import is_same_size, nn, optim
+from torch import nn, optim
 from torch.nn import functional as F
-import numpy as np 
-from PIL import Image
-from torch.autograd import Variable
-import glob
-import os
+
+
 class ModelWithTemperature(nn.Module):
     """
     A thin decorator, which wraps a model with temperature scaling
@@ -17,143 +14,63 @@ class ModelWithTemperature(nn.Module):
     def __init__(self, model):
         super(ModelWithTemperature, self).__init__()
         self.model = model
-        self.temperature = nn.Parameter(torch.ones(1) * 0.1)
+        self.temperature = nn.Parameter(torch.ones(1) * 1.5)
 
     def forward(self, input):
         logits = self.model(input)
-        softmax_probs = torch.nn.functional.softmax(logits.squeeze(0), dim=0)
-        anomaly_result = 1.0 - (np.max(softmax_probs.data.cpu().numpy(), axis=0))
-        return self.temperature_scale(anomaly_result)
+        return self.temperature_scale(logits)
 
     def temperature_scale(self, logits):
         """
         Perform temperature scaling on logits
         """
         # Expand temperature to match the size of logits
-        temperature = self.temperature #.expand(logits.size(0), -1)
+        temperature = self.temperature.unsqueeze(1).expand(logits.size(0), logits.size(1))
         return logits / temperature
 
     # This function probably should live outside of this class, but whatever
-    def set_temperature(self, valid_loader, images_path):
+    def set_temperature(self, valid_loader):
         """
         Tune the tempearature of the model (using the validation set).
         We're going to set it to optimize NLL.
         valid_loader (DataLoader): validation set loader
-        
         """
-        DATASETS = ["RoadAnomaly21", "RoadObsticle21", "FS_LostFound_full", "fs_static", "RoadAnomaly"]
         self.cuda()
-        nll_criterion = nn.BCEWithLogitsLoss().cuda()#CrossEntropyLoss().cuda()
-        #ece_criterion = _ECELoss().cuda()
-        
-        output = np.array([])
-        label_tot = np.array([])
-        for d in DATASETS:
-          data_path = f"{images_path}{d}/images/*.*"
-          ood_gts_list =[]
-          anomaly_score_list =[]
-          images_len = os.listdir(f"{images_path}{d}/images/")
-          image_count = 0
-          for path in glob.glob(os.path.expanduser(data_path)):
-            image_count +=1
-            if image_count > len(images_len)//2:
-              break
-            print(path)
-            images = torch.from_numpy(np.array(Image.open(path).convert('RGB'))).unsqueeze(0).float()
-            images = images.permute(0,3,1,2)
-            with torch.no_grad():
-                result = self.model(images)
+        nll_criterion = nn.CrossEntropyLoss().cuda()
+        ece_criterion = _ECELoss().cuda()
 
-            #anomaly_result = result
-            softmax_probs = torch.nn.functional.softmax(result.squeeze(0), dim=0)
-            anomaly_result = 1.0 - (np.max(softmax_probs.data.cpu().numpy(), axis=0))
-            #anomaly_result = result.data.cpu()     
-            pathGT = path.replace("images", "labels_masks")                
-            if "RoadObsticle21" in pathGT:
-              pathGT = pathGT.replace("webp", "png")
-            if "fs_static" in pathGT:
-              pathGT = pathGT.replace("jpg", "png")                
-            if "RoadAnomaly" in pathGT:
-              pathGT = pathGT.replace("jpg", "png")  
+        # First: collect all the logits and labels for the validation set
+        logits_list = []
+        labels_list = []
+        with torch.no_grad():
+            for input, label in valid_loader:
+                input = input.cuda()
+                logits = self.model(input)
+                logits_list.append(logits)
+                labels_list.append(label)
+            logits = torch.cat(logits_list).cuda()
+            labels = torch.cat(labels_list).cuda()
 
-            mask = Image.open(pathGT)
-            
-            ood_gts = np.array(mask)
-            if "RoadAnomaly" in pathGT:
-                ood_gts = np.where((ood_gts==2), 1, ood_gts)
-            if "LostAndFound" in pathGT:
-                ood_gts = np.where((ood_gts==0), 255, ood_gts)
-                ood_gts = np.where((ood_gts==1), 0, ood_gts)
-                ood_gts = np.where((ood_gts>1)&(ood_gts<201), 1, ood_gts)
-
-            if "Streethazard" in pathGT:
-                ood_gts = np.where((ood_gts==14), 255, ood_gts)
-                ood_gts = np.where((ood_gts<20), 0, ood_gts)
-                ood_gts = np.where((ood_gts==255), 1, ood_gts)
-
-            if 1 not in np.unique(ood_gts):
-                continue              
-            else:
-                ood_gts_list.append(ood_gts)
-                anomaly_score_list.append(anomaly_result)
-
-            del result, anomaly_result, ood_gts, mask
-            torch.cuda.empty_cache()
-
-          torch.cuda.empty_cache()
-          ood_gts = np.array(ood_gts_list)
-          anomaly_scores = np.array(anomaly_score_list)
-          ood_mask = (ood_gts == 1)
-          ind_mask = (ood_gts == 0)
-
-          
-          ood_out = anomaly_scores[ood_mask]
-          ind_out = anomaly_scores[ind_mask]
-
-          ood_label = np.ones(len(ood_out))
-          ind_label = np.zeros(len(ind_out))
-
-
-          
-          val_out = np.concatenate((ind_out, ood_out))
-
-          val_label = np.concatenate((ind_label, ood_label))
-          print(val_out.shape)
-          output =  np.concatenate((output, val_out))
-          label_tot =  np.concatenate((label_tot, val_label))
-
-        
-        val_out = torch.tensor([output.tolist()])#.squeeze(0)
-        val_label = torch.tensor([label_tot.tolist()])#.squeeze(0)
-        #val_out = torch.transpose(val_out.unsqueeze(0), 0, 1)
-        #val_label = torch.transpose(val_label.unsqueeze(0), 0, 1).squeeze(0)    
-        logits = val_out.cuda()
-        labels = val_label.cuda()#torch.tensor([0], dtype=torch.long).cuda()
-        #labels = torch.tensor([0]).cuda()
         # Calculate NLL and ECE before temperature scaling
         before_temperature_nll = nll_criterion(logits, labels).item()
-        before_temperature_ece = 0.0
-        #before_temperature_ece = ece_criterion(logits, labels).item()
+        before_temperature_ece = ece_criterion(logits, labels).item()
         print('Before temperature - NLL: %.3f, ECE: %.3f' % (before_temperature_nll, before_temperature_ece))
-        
+
         # Next: optimize the temperature w.r.t. NLL
-        optimizer = optim.LBFGS([self.temperature], lr=0.03, max_iter=100)
+        optimizer = optim.LBFGS([self.temperature], lr=0.01, max_iter=50)
 
         def eval():
             optimizer.zero_grad()
             loss = nll_criterion(self.temperature_scale(logits), labels)
-            #print(loss)
-            #torch.cuda.empty_cache()
             loss.backward()
             return loss
         optimizer.step(eval)
 
         # Calculate NLL and ECE after temperature scaling
         after_temperature_nll = nll_criterion(self.temperature_scale(logits), labels).item()
-        #torch.cuda.empty_cache()
-        #after_temperature_ece = ece_criterion(self.temperature_scale(logits.cuda()), labels.cuda()).item()
+        after_temperature_ece = ece_criterion(self.temperature_scale(logits), labels).item()
         print('Optimal temperature: %.3f' % self.temperature.item())
-        print('After temperature - NLL: %.3f, ECE: %.3f' % (after_temperature_nll,0.0))
+        print('After temperature - NLL: %.3f, ECE: %.3f' % (after_temperature_nll, after_temperature_ece))
 
         return self
 

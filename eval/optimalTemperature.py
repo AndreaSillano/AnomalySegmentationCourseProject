@@ -13,7 +13,11 @@ from argparse import ArgumentParser
 from ood_metrics import fpr_at_95_tpr, calc_metrics, plot_roc, plot_pr,plot_barcode
 from sklearn.metrics import roc_auc_score, roc_curve, auc, precision_recall_curve, average_precision_score
 from temperature_scaling import ModelWithTemperature
+from dataset import cityscapes
 from torch.utils.data import DataLoader
+from torchvision import transforms
+from torchvision.transforms import ToTensor, ToPILImage
+from torchvision.transforms import Compose, CenterCrop, Normalize, Resize
 from dataset import VOC12
 
 seed = 42
@@ -85,8 +89,12 @@ def main():
     model.eval()
     model_to_optimize = ModelWithTemperature(model)
     print(args.input[0])
+  
+    dataset_val_cityscapes = cityscapes(args.datadir,  None,  'val')
+    loader = DataLoader(dataset_val_cityscapes, num_workers=4, batch_size=6, shuffle=True)
+
    
-    model_to_optimize.set_temperature(None, images_path=args.input[0])
+    model_to_optimize.set_temperature(loader)
     print("Done!")
    
 
