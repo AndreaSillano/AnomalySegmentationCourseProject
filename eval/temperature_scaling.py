@@ -2,7 +2,6 @@ import torch
 from torch import nn, optim
 from torch.nn import functional as F
 
-
 class ModelWithTemperature(nn.Module):
     """
     A thin decorator, which wraps a model with temperature scaling
