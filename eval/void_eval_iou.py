@@ -105,7 +105,7 @@ def main(args):
     loader = DataLoader(cityscapes(args.datadir, input_transform_cityscapes, target_transform_cityscapes, subset=args.subset), num_workers=args.num_workers, batch_size=args.batch_size, shuffle=False)
 
 
-    iouEvalVal = iouEval(NUM_CLASSES, ignoreIndex=20)
+    iouEvalVal = iouEval(NUM_CLASSES)
 
     start = time.time()
 
@@ -118,9 +118,11 @@ def main(args):
         with torch.no_grad():
             if args.model == 'BiseNet':
               outputs = model(inputs)[0]
-            else:  
+            elif args.model == "ENet":  
               outputs = model(inputs)
-
+              outputs = torch.roll(outputs, -1, 1)
+            else: 
+              outputs = model(inputs)
         iouEvalVal.addBatch(outputs.max(1)[1].unsqueeze(1).data, labels)
 
         filenameSave = filename[0].split("leftImg8bit/")[1] 

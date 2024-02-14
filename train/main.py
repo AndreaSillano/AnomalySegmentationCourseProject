@@ -85,15 +85,15 @@ def train_wrapper(args, model, enc=False):
     assert os.path.exists(args.datadir), "Error: datadir (dataset directory) could not be loaded"
     co_transform = MyCoTransform(enc, augment=True, height=args.height)#1024)
     co_transform_val = MyCoTransform(enc, augment=False, height=args.height)#1024)
-    dataset_train_cityscapes = cityscapes(args.datadir, co_transform, 'train')
-    dataset_val_cityscapes = cityscapes(args.datadir, co_transform_val, 'val')
-    dataset_train_camvid = camvid(args.datadir, co_transform, 'train')
-    dataset_val_camvid= camvid(args.datadir, co_transform_val, 'val')
+    dataset_train_cityscapes = cityscapes("../dataset/Cityscapes", co_transform, 'train')
+    dataset_val_cityscapes = cityscapes("../dataset/Cityscapes", co_transform_val, 'val')
+    dataset_train_camvid = camvid("../dataset/CamVid", co_transform, 'train')
+    dataset_val_camvid= camvid("../dataset/CamVid", co_transform_val, 'val')
 
 
     weight = init_weight(enc)
     model = train(args, model, weight, dataset_train_cityscapes, dataset_val_cityscapes,enc)
-    model = train(args, model, None, dataset_train_camvid, dataset_val_camvid,enc)
+    #model = train(args, model, None, dataset_train_camvid, dataset_val_camvid,enc)
 
 
 def init_weight(enc):
@@ -140,11 +140,14 @@ def init_weight(enc):
         weight[18] = 10.138095855713	
 
     weight[19] = 0
+    return weight
 def train(args, model, weight,dataset_train,dataset_val, enc=False):
     best_acc = 0
 
     #TODO: calculate weights by processing dataset histogram (now its being set by hand from the torch values)
     #create a loder to run all images and calculate histogram of labels, then create weight array using class balancing
+    #print(weight)
+    
     if weight == None:
         pass
         #weight = torch.ones(NUM_CLASSES)
@@ -169,7 +172,7 @@ def train(args, model, weight,dataset_train,dataset_val, enc=False):
     loader = DataLoader(dataset_train, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=True)
     loader_val = DataLoader(dataset_val, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=False)
 
-    if args.cuda and weight != None:
+    if args.cuda:
         weight = weight.cuda()
     criterion = CrossEntropyLoss2d(weight)
     print(type(criterion))
@@ -258,9 +261,10 @@ def train(args, model, weight,dataset_train,dataset_val, enc=False):
             outputs = model(inputs, only_encode=enc)
 
             #print("targets", np.unique(targets[:, 0].cpu().data.numpy()))
-
+            #print(targets[:, 0])
             optimizer.zero_grad()
             loss = criterion(outputs, targets[:, 0])
+            print(loss)
             loss.backward()
             optimizer.step()
 
@@ -488,7 +492,7 @@ def main(args):
     #train(args, model)
     if (not args.decoder):
         print("========== ENCODER TRAINING ===========")
-        model = train(args, model, True) #Train encoder
+        model = train_wrapper(args, model, True) #Train encoder
     #CAREFUL: for some reason, after training encoder alone, the decoder gets weights=0. 
     #We must reinit decoder weights or reload network passing only encoder in order to train decoder
     print("========== DECODER TRAINING ===========")
@@ -536,5 +540,5 @@ if __name__ == '__main__':
 
     dataset_train = camvid(parser.parse_args().datadir)
     dataset_val = camvid(parser.parse_args().datadir, None, 'val')
-    print(dataset_train.__len__())
-   # main(parser.parse_args())
+    #print(dataset_train.__len__())
+    main(parser.parse_args())
