@@ -83,15 +83,15 @@ class CrossEntropyLoss2d(torch.nn.Module):
         return self.loss(torch.nn.functional.log_softmax(outputs, dim=1), targets)
 
 def train_wrapper(args, model, enc=False): 
-    assert os.path.exists(args.datadir), "Error: datadir (dataset directory) could not be loaded"
+    assert os.path.exists("../dataset/Cityscapes"), "Error: datadir (dataset directory) could not be loaded"
+    assert os.path.exists("../dataset/CamVid"), "Error: datadir (dataset directory) could not be loaded"
     co_transform = MyCoTransform(enc, augment=True, height=args.height)#1024)
     co_transform_val = MyCoTransform(enc, augment=False, height=args.height)#1024)
     dataset_train_cityscapes = cityscapes("../dataset/Cityscapes", co_transform, 'train')
     dataset_val_cityscapes = cityscapes("../dataset/Cityscapes", co_transform_val, 'val')
     dataset_train_camvid = camvid("../dataset/CamVid", co_transform, 'train')
     dataset_val_camvid= camvid("../dataset/CamVid", co_transform_val, 'val')
-    w = list(model.parameters())
-    print(w[-1].detach().cpu())
+
 
     weight = init_weight(enc)
     model = train(args, model, weight, dataset_train_cityscapes, dataset_val_cityscapes,enc)
