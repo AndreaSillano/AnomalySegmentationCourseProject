@@ -12,6 +12,7 @@ import math
 
 from PIL import Image, ImageOps
 from argparse import ArgumentParser
+from torch.nn import parameter
 
 from torch.optim import SGD, Adam, lr_scheduler
 from torch.autograd import Variable
@@ -89,11 +90,14 @@ def train_wrapper(args, model, enc=False):
     dataset_val_cityscapes = cityscapes("../dataset/Cityscapes", co_transform_val, 'val')
     dataset_train_camvid = camvid("../dataset/CamVid", co_transform, 'train')
     dataset_val_camvid= camvid("../dataset/CamVid", co_transform_val, 'val')
-
+    w = list(model.parameters())
+    print(w[-1].detach().cpu())
 
     weight = init_weight(enc)
     model = train(args, model, weight, dataset_train_cityscapes, dataset_val_cityscapes,enc)
-    #model = train(args, model, None, dataset_train_camvid, dataset_val_camvid,enc)
+    new_weight = list(model.parameters())
+    new_weight =new_weight[-1].detach().cpu()
+    model = train(args, model, new_weight, dataset_train_camvid, dataset_val_camvid,enc)
 
 
 def init_weight(enc):
@@ -147,9 +151,7 @@ def train(args, model, weight,dataset_train,dataset_val, enc=False):
     #TODO: calculate weights by processing dataset histogram (now its being set by hand from the torch values)
     #create a loder to run all images and calculate histogram of labels, then create weight array using class balancing
     #print(weight)
-    
-    if weight == None:
-        pass
+  
         #weight = torch.ones(NUM_CLASSES)
         #for i in range(0,20):
             
@@ -264,11 +266,11 @@ def train(args, model, weight,dataset_train,dataset_val, enc=False):
             #print(targets[:, 0])
             optimizer.zero_grad()
             loss = criterion(outputs, targets[:, 0])
-            print(loss)
+            print(loss.item())
             loss.backward()
             optimizer.step()
 
-            epoch_loss.append(loss.data[0])
+            epoch_loss.append(loss.item())
             time_train.append(time.time() - start_time)
 
             if (doIouTrain):
@@ -328,7 +330,7 @@ def train(args, model, weight,dataset_train,dataset_val, enc=False):
             outputs = model(inputs, only_encode=enc) 
 
             loss = criterion(outputs, targets[:, 0])
-            epoch_loss_val.append(loss.data[0])
+            epoch_loss_val.append(loss.item())
             time_val.append(time.time() - start_time)
 
 
@@ -538,7 +540,5 @@ if __name__ == '__main__':
     parser.add_argument('--iouVal', action='store_true', default=True)  
     parser.add_argument('--resume', action='store_true')    #Use this flag to load last checkpoint for training  
 
-    dataset_train = camvid(parser.parse_args().datadir)
-    dataset_val = camvid(parser.parse_args().datadir, None, 'val')
-    #print(dataset_train.__len__())
+    
     main(parser.parse_args())
