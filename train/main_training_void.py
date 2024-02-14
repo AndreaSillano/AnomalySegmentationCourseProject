@@ -82,22 +82,7 @@ class CrossEntropyLoss2d(torch.nn.Module):
     def forward(self, outputs, targets):
         return self.loss(torch.nn.functional.log_softmax(outputs, dim=1), targets)
 
-def train_wrapper(args, model, enc=False): 
-    assert os.path.exists("../dataset/Cityscapes"), "Error: datadir (dataset directory) could not be loaded"
-    assert os.path.exists("../dataset/CamVid"), "Error: datadir (dataset directory) could not be loaded"
-    co_transform = MyCoTransform(enc, augment=True, height=args.height)#1024)
-    co_transform_val = MyCoTransform(enc, augment=False, height=args.height)#1024)
-    dataset_train_cityscapes = cityscapes("../dataset/Cityscapes", co_transform, 'train')
-    dataset_val_cityscapes = cityscapes("../dataset/Cityscapes", co_transform_val, 'val')
-    dataset_train_camvid = camvid("../dataset/CamVid", co_transform, 'train')
-    dataset_val_camvid= camvid("../dataset/CamVid", co_transform_val, 'val')
 
-
-    weight = init_weight(enc)
-    model = train(args, model, weight, dataset_train_cityscapes, dataset_val_cityscapes,enc)
-    new_weight = list(model.parameters())
-    new_weight =new_weight[-1].detach().cpu()
-    model = train(args, model, new_weight, dataset_train_camvid, dataset_val_camvid,enc)
 
 
 def init_weight(enc):
@@ -145,6 +130,17 @@ def init_weight(enc):
 
     weight[19] = 0
     return weight
+
+def train_wrapper(args, model, enc=False): 
+    assert os.path.exists("../dataset/Cityscapes"), "Error: datadir (dataset directory) could not be loaded"
+    co_transform = MyCoTransform(enc, augment=True, height=args.height)#1024)
+    co_transform_val = MyCoTransform(enc, augment=False, height=args.height)#1024)
+    dataset_train_cityscapes = cityscapes("../dataset/Cityscapes", co_transform, 'train')
+    dataset_val_cityscapes = cityscapes("../dataset/Cityscapes", co_transform_val, 'val')
+
+    weight = init_weight(enc)
+    model = train(args, model, weight, dataset_train_cityscapes, dataset_val_cityscapes,enc)
+
 def train(args, model, weight,dataset_train,dataset_val, enc=False):
     best_acc = 0
 
@@ -208,18 +204,33 @@ def train(args, model, weight,dataset_train,dataset_val, enc=False):
     if args.resume:
         #Must load weights, optimizer, epoch and best value. 
         if enc:
-            filenameCheckpoint = savedir + '/checkpoint_enc.pth.tar'
+            filenameCheckpoint = '../trained_models/erfnet_encoder_pretrained.pth.tar'
         else:
-            filenameCheckpoint = savedir + '/checkpoint.pth.tar'
+            #filenameCheckpoint = savedir + '/checkpoint.pth.tar'
+            filenameCheckpoint = '../trained_models/erfnet_pretrained.pth'
 
         assert os.path.exists(filenameCheckpoint), "Error: resume option was used but checkpoint was not found in folder"
-        checkpoint = torch.load(filenameCheckpoint)
+        '''checkpoint = torch.load(filenameCheckpoint)
         start_epoch = checkpoint['epoch']
         model.load_state_dict(checkpoint['state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer'])
-        best_acc = checkpoint['best_acc']
-        print("=> Loaded checkpoint at epoch {})".format(checkpoint['epoch']))
+        best_acc = checkpoint['best_acc']'''
+        def load_my_state_dict(model, state_dict):  #custom function to load model when not all dict elements
+          own_state = model.state_dict()
+          for name, param in state_dict.items():
+              if name not in own_state:
+                  if name.startswith("module."):
+                      own_state[name.split("module.")[-1]].copy_(param)
+                  else:
+                      print(name, " not loaded")
+                      continue
+              else:
+                  own_state[name].copy_(param)
+          return model
 
+        model = load_my_state_dict(model, torch.load(filenameCheckpoint, map_location=lambda storage, loc: storage))
+        #print("=> Loaded checkpoint at epoch {})".format(checkpoint['epoch']))
+        print("=> Loaded trained Model")
     #scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5) # set up scheduler     ## scheduler 1
     lambda1 = lambda epoch: pow((1-((epoch-1)/args.num_epochs)),0.9)  ## scheduler 2
     scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda1)                             ## scheduler 2
@@ -259,9 +270,21 @@ def train(args, model, weight,dataset_train,dataset_val, enc=False):
                 labels = labels.cuda()
 
             inputs = Variable(images)
+            labels = torch.where(labels == 19, 1, 0)
             targets = Variable(labels)
-            outputs = model(inputs, only_encode=enc)
 
+            outputs = model(inputs, only_encode=enc)
+            #print(outputs[0,0, : , :])
+            
+            #outputs = torch.where(outputs == 19, 1, 0)
+            #print(output_void[0,0,:,: ])
+
+          #sostituisci tutti i valori sotto 19 in 0 e sostituisci quelli a 19 in 1
+            #print(labels[0,0,:,: ])
+            
+
+            #print(labels_void[0,0,:,: ])
+           
             #print("targets", np.unique(targets[:, 0].cpu().data.numpy()))
             #print(targets[:, 0])
             optimizer.zero_grad()
@@ -326,9 +349,9 @@ def train(args, model, weight,dataset_train,dataset_val, enc=False):
                 labels = labels.cuda()
 
             inputs = Variable(images, volatile=True)    #volatile flag makes it free backward or outputs for eval
+            labels = torch.where(labels == 19, 1, 0)
             targets = Variable(labels, volatile=True)
             outputs = model(inputs, only_encode=enc) 
-            
 
             loss = criterion(outputs, targets[:, 0])
             epoch_loss_val.append(loss.item())
@@ -514,7 +537,7 @@ def main(args):
         if args.cuda:
             model = torch.nn.DataParallel(model).cuda()
         #When loading encoder reinitialize weights for decoder because they are set to 0 when training dec
-    model = train(args, model, False)   #Train decoder
+    model = train_wrapper(args, model, False)   #Train decoder
     print("========== TRAINING FINISHED ===========")
 
 if __name__ == '__main__':

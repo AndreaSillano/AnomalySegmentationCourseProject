@@ -49,7 +49,9 @@ def main(args):
     if args.model == 'ErfNet':
         model = ERFNet(NUM_CLASSES)
         modelpath = args.loadDir + args.loadModel
-        weightspath = args.loadDir + "erfnet_pretrained.pth" #args.loadWeights
+        #weightspath = args.loadDir + "erfnet_pretrained.pth" #args.loadWeights
+
+        weightspath = "../save/trainingdata/model_best.pth"#args.loadDir + "erfnet_pretrained.pth" #args.loadWeights
 
         print ("Loading model: " + modelpath)
         print ("Loading weights: " + weightspath)
@@ -105,7 +107,7 @@ def main(args):
     loader = DataLoader(cityscapes(args.datadir, input_transform_cityscapes, target_transform_cityscapes, subset=args.subset), num_workers=args.num_workers, batch_size=args.batch_size, shuffle=False)
 
 
-    iouEvalVal = iouEval(NUM_CLASSES)
+    iouEvalVal = iouEval(2, ignoreIndex=-1)
 
     start = time.time()
 
@@ -123,7 +125,15 @@ def main(args):
               outputs = torch.roll(outputs, -1, 1)
             else: 
               outputs = model(inputs)
-        iouEvalVal.addBatch(outputs.max(1)[1].unsqueeze(1).data, labels)
+
+        predicted_labels = outputs.max(1)[1].unsqueeze(1).data
+        #print(labels[:,0])
+        
+        predicted_labels_void = torch.where(predicted_labels == 19, 1, 0)
+        print(predicted_labels[:,0])
+        labels_void = torch.where(labels == 19, 1, 0)
+        print(labels_void[:,0])
+        iouEvalVal.addBatch(predicted_labels_void, labels_void)
 
         filenameSave = filename[0].split("leftImg8bit/")[1] 
 
@@ -142,9 +152,9 @@ def main(args):
     print("=======================================")
     #print("TOTAL IOU: ", iou * 100, "%")
     print("Per-Class IoU:")
-    print(iou_classes_str[0], "Road")
-    print(iou_classes_str[1], "sidewalk")
-    print(iou_classes_str[2], "building")
+    print(iou_classes_str[0], "NON-VOID")
+    print(iou_classes_str[1], "VOID")
+    '''print(iou_classes_str[2], "building")
     print(iou_classes_str[3], "wall")
     print(iou_classes_str[4], "fence")
     print(iou_classes_str[5], "pole")
@@ -160,7 +170,7 @@ def main(args):
     print(iou_classes_str[15], "bus")
     print(iou_classes_str[16], "train")
     print(iou_classes_str[17], "motorcycle")
-    print(iou_classes_str[18], "bicycle")
+    print(iou_classes_str[18], "bicycle")'''
     print("=======================================")
     iouStr = getColorEntry(iouVal)+'{:0.2f}'.format(iouVal*100) + '\033[0m'
     print ("MEAN IoU: ", iouStr, "%")
