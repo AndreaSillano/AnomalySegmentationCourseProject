@@ -51,7 +51,7 @@ def main(args):
         modelpath = args.loadDir + args.loadModel
         #weightspath = args.loadDir + "erfnet_pretrained.pth" #args.loadWeights
 
-        weightspath = "../save/trainingdata/model_best.pth"#args.loadDir + "erfnet_pretrained.pth" #args.loadWeights
+        weightspath = "../save/trainingdataerfnet/model_best_erfnet.pth"#args.loadDir + "erfnet_pretrained.pth" #args.loadWeights
 
         print ("Loading model: " + modelpath)
         print ("Loading weights: " + weightspath)
@@ -72,8 +72,8 @@ def main(args):
     elif args.model == 'ENet':
         model = ENet(NUM_CLASSES)
         modelpath = args.loadDir + args.loadModel
-        weightspath = args.loadDir + "enet_pretrained" #args.loadWeights
-
+        weightspath = "../save/trainingdataenet/model_best_enet.pth"#args.loadDir + "erfnet_pretrained.pth" #args.loadWeights
+    
         print ("Loading model: " + modelpath)
         print ("Loading weights: " + weightspath)
         state_dict = torch.load(weightspath)
@@ -81,7 +81,8 @@ def main(args):
     elif args.model == 'BiseNet':
         model = BiSeNetV1(NUM_CLASSES)
         modelpath = args.loadDir + args.loadModel
-        weightspath = args.loadDir + "bisenetv1_cityscapes.pth" #args.loadWeights
+        weightspath = "../save/trainingdatabisenetv1/model_best_bisenetv1.pth" #args.loadDir + "erfnet_pretrained.pth" #args.loadWeights
+#weightspath = args.loadDir + "bisenetv1_cityscapes.pth" #args.loadWeights
 
         print ("Loading model: " + modelpath)
         print ("Loading weights: " + weightspath)

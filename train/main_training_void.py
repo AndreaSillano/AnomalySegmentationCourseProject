@@ -30,6 +30,7 @@ from iouEval import iouEval, getColorEntry
 from shutil import copyfile
 
 from enet import ENet
+from bisenetv1 import BiSeNetV1
 
 NUM_CHANNELS = 3
 NUM_CLASSES = 20 #pascal=22, cityscapes=20
@@ -212,7 +213,7 @@ def train(args, model, weight,dataset_train,dataset_val, enc=False):
     criterion = CrossEntropyLoss2d(weight)
     print(type(criterion))
 
-    savedir = f'../save/{args.savedir}'
+    savedir = f'../save/{args.savedir}{args.model}'
 
     if (enc):
         automated_log_path = savedir + "/automated_log_encoder.txt"
@@ -281,6 +282,15 @@ def train(args, model, weight,dataset_train,dataset_val, enc=False):
           state_dict = torch.load(filenameCheckpoint)
           model.load_state_dict(state_dict['state_dict'])
           print("=> Loaded trained Model ENET")
+        elif args.model == 'bisenetv1':
+            filenameCheckpoint = '../trained_models/bisenetv1_cityscapes.pth'
+
+            assert os.path.exists(filenameCheckpoint), "Error: resume option was used but checkpoint was not found in folder"
+            #print ("Loading model: " + modelpath)
+            #print ("Loading weights: " + weightspath)
+            state_dict = torch.load(filenameCheckpoint)
+            model.load_state_dict(state_dict)
+            print("=> Loaded trained Model Bisenetv1")
 
     #scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5) # set up scheduler     ## scheduler 1
     lambda1 = lambda epoch: pow((1-((epoch-1)/args.num_epochs)),0.9)  ## scheduler 2
@@ -325,6 +335,8 @@ def train(args, model, weight,dataset_train,dataset_val, enc=False):
             targets = Variable(labels)
             if args.model == 'enet':
               outputs = model(inputs)
+            elif args.model == 'bisenetv1': 
+                outputs = model(inputs)[0]
             else: 
               outputs = model(inputs, only_encode=enc)
 
@@ -408,6 +420,8 @@ def train(args, model, weight,dataset_train,dataset_val, enc=False):
 
             if args.model == 'enet':
               outputs = model(inputs)
+            elif args.model == 'bisenetv1': 
+                outputs = model(inputs)[0]
             else: 
               outputs = model(inputs, only_encode=enc)
 
@@ -478,7 +492,7 @@ def train(args, model, weight,dataset_train,dataset_val, enc=False):
             filenamebest = f'{savedir}/model_encoder_best.pth'
         else:
             filename = f'{savedir}/model-{epoch:03}.pth'
-            filenamebest = f'{savedir}/model_best.pth'
+            filenamebest = f'{savedir}/model_best_{args.model}.pth'
         if args.epochs_save > 0 and step > 0 and step % args.epochs_save == 0:
             torch.save(model.state_dict(), filename)
             print(f'save: {filename} (epoch: {epoch})')
@@ -520,6 +534,8 @@ def main(args):
     model_file = importlib.import_module(args.model)
     if args.model == 'enet':
       model = ENet(NUM_CLASSES)
+    elif args.model == 'bisenetv1':
+        model = BiSeNetV1(NUM_CLASSES)
     else:
       model = model_file.Net(NUM_CLASSES)
     copyfile(args.model + ".py", savedir + '/' + args.model + ".py")
