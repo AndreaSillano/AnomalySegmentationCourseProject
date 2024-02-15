@@ -83,6 +83,7 @@ class CrossEntropyLoss2d(torch.nn.Module):
         return self.loss(torch.nn.functional.log_softmax(outputs, dim=1), targets)
 
 def calculate_weights(dataset):
+      
       label_counts = torch.zeros(NUM_CLASSES)
       for data in dataset:
           _, labels = data
@@ -149,12 +150,14 @@ def train_wrapper(args, model, enc=False):
 
         model = load_my_state_dict(model, torch.load(filenameCheckpoint, map_location=lambda storage, loc: storage))
         print("=> Loaded Model)")
-    
+
     weight = init_weight_2(enc)
     model = train(args, model, weight, dataset_train_cityscapes, dataset_val_cityscapes,enc)
     #new_weight = list(model.parameters())
     #new_weight =new_weight[-1].detach().cpu()
+    
     weight = torch.tensor(calculate_weights(dataset_train_camvid))
+
     model = train(args, model, weight, dataset_train_camvid, dataset_val_camvid,enc)
 
 

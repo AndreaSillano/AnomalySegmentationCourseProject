@@ -29,6 +29,8 @@ from iouEval import iouEval, getColorEntry
 
 from shutil import copyfile
 
+from enet import ENet
+
 NUM_CHANNELS = 3
 NUM_CLASSES = 20 #pascal=22, cityscapes=20
 
@@ -238,34 +240,48 @@ def train(args, model, weight,dataset_train,dataset_val, enc=False):
 
     if args.resume:
         #Must load weights, optimizer, epoch and best value. 
-        if enc:
-            filenameCheckpoint = '../trained_models/erfnet_encoder_pretrained.pth.tar'
-        else:
-            #filenameCheckpoint = savedir + '/checkpoint.pth.tar'
-            filenameCheckpoint = '../trained_models/erfnet_pretrained.pth'
+        if args.model == "erfnet":
+          if enc:
+              filenameCheckpoint = '../trained_models/erfnet_encoder_pretrained.pth.tar'
+          else:
+              #filenameCheckpoint = savedir + '/checkpoint.pth.tar'
+              filenameCheckpoint = '../trained_models/erfnet_pretrained.pth'
 
-        assert os.path.exists(filenameCheckpoint), "Error: resume option was used but checkpoint was not found in folder"
-        '''checkpoint = torch.load(filenameCheckpoint)
-        start_epoch = checkpoint['epoch']
-        model.load_state_dict(checkpoint['state_dict'])
-        optimizer.load_state_dict(checkpoint['optimizer'])
-        best_acc = checkpoint['best_acc']'''
-        def load_my_state_dict(model, state_dict):  #custom function to load model when not all dict elements
-          own_state = model.state_dict()
-          for name, param in state_dict.items():
-              if name not in own_state:
-                  if name.startswith("module."):
-                      own_state[name.split("module.")[-1]].copy_(param)
-                  else:
-                      print(name, " not loaded")
-                      continue
-              else:
-                  own_state[name].copy_(param)
-          return model
+          assert os.path.exists(filenameCheckpoint), "Error: resume option was used but checkpoint was not found in folder"
+          '''checkpoint = torch.load(filenameCheckpoint)
+          start_epoch = checkpoint['epoch']
+          model.load_state_dict(checkpoint['state_dict'])
+          optimizer.load_state_dict(checkpoint['optimizer'])
+          best_acc = checkpoint['best_acc']'''
+          def load_my_state_dict(model, state_dict):  #custom function to load model when not all dict elements
+            own_state = model.state_dict()
+            for name, param in state_dict.items():
+                if name not in own_state:
+                    if name.startswith("module."):
+                        own_state[name.split("module.")[-1]].copy_(param)
+                    else:
+                        print(name, " not loaded")
+                        continue
+                else:
+                    own_state[name].copy_(param)
+            return model
 
-        model = load_my_state_dict(model, torch.load(filenameCheckpoint, map_location=lambda storage, loc: storage))
-        #print("=> Loaded checkpoint at epoch {})".format(checkpoint['epoch']))
-        print("=> Loaded trained Model")
+          model = load_my_state_dict(model, torch.load(filenameCheckpoint, map_location=lambda storage, loc: storage))
+          #print("=> Loaded checkpoint at epoch {})".format(checkpoint['epoch']))
+          print("=> Loaded trained Model ERFENT")
+        elif args.model == 'ENet':
+          #model = ENet(NUM_CLASSES)
+          #modelpath = args.loadDir + args.loadModel
+          #weightspath = args.loadDir + "enet_pretrained" #args.loadWeights
+          filenameCheckpoint = '../trained_models/enet_pretrained'
+
+          assert os.path.exists(filenameCheckpoint), "Error: resume option was used but checkpoint was not found in folder"
+          #print ("Loading model: " + modelpath)
+          #print ("Loading weights: " + weightspath)
+          state_dict = torch.load(filenameCheckpoint)
+          model.load_state_dict(state_dict['state_dict'])
+          print("=> Loaded trained Model ENET")
+
     #scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5) # set up scheduler     ## scheduler 1
     lambda1 = lambda epoch: pow((1-((epoch-1)/args.num_epochs)),0.9)  ## scheduler 2
     scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda1)                             ## scheduler 2
@@ -307,8 +323,11 @@ def train(args, model, weight,dataset_train,dataset_val, enc=False):
             inputs = Variable(images)
             labels = torch.where(labels == 19, 1, 0)
             targets = Variable(labels)
+            if args.model == 'enet':
+              outputs = model(inputs)
+            else: 
+              outputs = model(inputs, only_encode=enc)
 
-            outputs = model(inputs, only_encode=enc)
             #print(outputs[0,0, : , :])
             
             #outputs = torch.where(outputs == 19, 1, 0)
@@ -386,7 +405,11 @@ def train(args, model, weight,dataset_train,dataset_val, enc=False):
             inputs = Variable(images, volatile=True)    #volatile flag makes it free backward or outputs for eval
             labels = torch.where(labels == 19, 1, 0)
             targets = Variable(labels, volatile=True)
-            outputs = model(inputs, only_encode=enc) 
+
+            if args.model == 'enet':
+              outputs = model(inputs)
+            else: 
+              outputs = model(inputs, only_encode=enc)
 
             loss = criterion(outputs, targets[:, 0])
             epoch_loss_val.append(loss.item())
@@ -495,7 +518,10 @@ def main(args):
     #Load Model
     assert os.path.exists(args.model + ".py"), "Error: model definition not found"
     model_file = importlib.import_module(args.model)
-    model = model_file.Net(NUM_CLASSES)
+    if args.model == 'enet':
+      model = ENet(NUM_CLASSES)
+    else:
+      model = model_file.Net(NUM_CLASSES)
     copyfile(args.model + ".py", savedir + '/' + args.model + ".py")
     
     if args.cuda:
@@ -557,7 +583,7 @@ def main(args):
     #CAREFUL: for some reason, after training encoder alone, the decoder gets weights=0. 
     #We must reinit decoder weights or reload network passing only encoder in order to train decoder
     print("========== DECODER TRAINING ===========")
-    if (not args.state):
+    if (not args.state) and args.model!='enet':
         if args.pretrainedEncoder:
             print("Loading encoder pretrained in imagenet")
             from erfnet_imagenet import ERFNet as ERFNet_imagenet
