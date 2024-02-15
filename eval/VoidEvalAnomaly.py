@@ -106,7 +106,7 @@ def main():
 
         print ("Loading model: " + modelpath)
         print ("Loading weights: " + weightspath)
-        state_dict = torch.load(weightspath)
+        #state_dict = torch.load(weightspath)
         def load_my_state_dict(model, state_dict):  #custom function to load model when not all dict elements
             own_state = model.state_dict()
             for name, param in state_dict.items():
@@ -118,7 +118,7 @@ def main():
                         continue
                 else:
                     own_state[name].copy_(param)
-        return model
+            return model
         model = load_my_state_dict(model, torch.load(weightspath, map_location=lambda storage, loc: storage))
     else:
         raise ValueError("Cannot find model")
