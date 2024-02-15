@@ -131,7 +131,7 @@ def main():
         images = torch.from_numpy(np.array(Image.open(path).convert('RGB'))).unsqueeze(0).float()
         if 'FS_LostFound_full' in path:
             count+=1
-            if count > len(os.listdir(args.input[0]))*0.7:
+            if count > len(os.listdir("Validation_Dataset/FS_LostFound_full/images"))*0.5:
                 break
         images = images.permute(0,3,1,2)
         with torch.no_grad():
