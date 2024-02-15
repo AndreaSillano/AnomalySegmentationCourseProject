@@ -208,7 +208,7 @@ def init_weight(enc):
     return weight
 def train(args, model, weight,dataset_train,dataset_val, enc=False):
     best_acc = 0
-
+    
   
 
     loader = DataLoader(dataset_train, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=True)

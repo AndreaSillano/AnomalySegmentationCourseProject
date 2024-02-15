@@ -1,8 +1,10 @@
 import numpy as np
 import os
+import classmapping
 
 from PIL import Image
-
+import numpy as np
+import torch
 from torch.utils.data import Dataset
 
 EXTENSIONS = ['.jpg', '.png']
@@ -127,11 +129,15 @@ class camvid(Dataset):
         with open(image_path_city('', filename), 'rb') as f:
             image = load_image(f).convert('RGB')
         with open(image_path_city('', filenameGt), 'rb') as f:
-            label = load_image(f).convert('P')
+            label = load_image(f).convert('RGB')
 
         if self.co_transform is not None:
             image, label = self.co_transform(image, label)
-        
+
+        for i in range(0, label.shape[1]):
+          for j in range (0, label.shape[2]):
+            rgb =  label[:,i,j].tolist()
+            label[:,i,j] = classmapping.get_label_cityscapes((rgb[0],rgb[1],rgb[2]))
         return image, label
 
     def __len__(self):
