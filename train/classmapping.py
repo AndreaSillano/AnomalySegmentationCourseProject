@@ -34,4 +34,7 @@ rgb_to_class_mapping = {
 }
 
 def get_label_cityscapes(rgb)->int:
-    return rgb_to_class_mapping[(rgb[0], rgb[1],rgb[2])][2]
+    if (rgb[0], rgb[1],rgb[2]) in rgb_to_class_mapping:
+      return rgb_to_class_mapping[(rgb[0], rgb[1],rgb[2])][2]
+    else: 
+      return 19
