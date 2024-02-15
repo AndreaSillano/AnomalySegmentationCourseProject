@@ -155,11 +155,11 @@ def main(args):
         predicted_labels = outputs.max(1)[1].unsqueeze(1).data
         #print(labels[:,0])
         
-        #predicted_labels_void = torch.where(predicted_labels == 19, 1, 0)
+        predicted_labels_void = torch.where(predicted_labels == 19, 1, 0)
         print(predicted_labels[:,0])
         labels_void = torch.where(labels == 19, 1, 0)
         print(labels_void[:,0])
-        iouEvalVal.addBatch(predicted_labels, labels_void)
+        iouEvalVal.addBatch(predicted_labels_void, labels_void)
 
         filenameSave = filename[0].split("leftImg8bit/")[1] 
 
