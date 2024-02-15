@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
 
-from addtionalModels.resnet import Resnet18
+from resnet import Resnet18
 
 from torch.nn import BatchNorm2d
 
