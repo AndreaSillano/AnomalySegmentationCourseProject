@@ -599,7 +599,7 @@ def main(args):
     #CAREFUL: for some reason, after training encoder alone, the decoder gets weights=0. 
     #We must reinit decoder weights or reload network passing only encoder in order to train decoder
     print("========== DECODER TRAINING ===========")
-    if (not args.state) and args.model!='enet':
+    if (not args.state) and args.model!='enet' and args.model != 'bisenetv1':
         if args.pretrainedEncoder:
             print("Loading encoder pretrained in imagenet")
             from erfnet_imagenet import ERFNet as ERFNet_imagenet
