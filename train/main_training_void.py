@@ -343,7 +343,7 @@ def train(args, model, weight,dataset_train,dataset_val, enc=False):
                 labels = labels.cuda()
 
             inputs = Variable(images)
-            labels = torch.where(labels == 19, 1, 0)
+            #labels = torch.where(labels == 19, 1, 0)
             targets = Variable(labels)
             if args.model == 'enet':
               outputs = model(inputs)
@@ -427,7 +427,7 @@ def train(args, model, weight,dataset_train,dataset_val, enc=False):
                 labels = labels.cuda()
 
             inputs = Variable(images, volatile=True)    #volatile flag makes it free backward or outputs for eval
-            labels = torch.where(labels == 19, 1, 0)
+            #labels = torch.where(labels == 19, 1, 0)
             targets = Variable(labels, volatile=True)
 
             if args.model == 'enet':
