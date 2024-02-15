@@ -82,6 +82,40 @@ class CrossEntropyLoss2d(torch.nn.Module):
     def forward(self, outputs, targets):
         return self.loss(torch.nn.functional.log_softmax(outputs, dim=1), targets)
 
+def calculate_weights(dataset):
+      label_counts = torch.zeros(NUM_CLASSES)
+      for data in dataset:
+          _, labels = data
+          label_counts += torch.bincount(labels.flatten(), minlength=NUM_CLASSES)
+
+      total_samples = sum(label_counts)
+      weights = total_samples / (label_counts * NUM_CLASSES )
+
+      return weights
+    
+def init_weight_2(enc):
+    weight = torch.ones(NUM_CLASSES)
+    weight[0] = 0.1524
+    weight[1] = 0.9292	
+    weight[2] = 0.2480	
+    weight[3] = 8.6231
+    weight[4] =  6.4398
+    weight[5] =  4.6060
+    weight[6] = 27.1154
+    weight[7] = 10.2248
+    weight[8] = 0.3554	
+    weight[9] = 4.8813	
+    weight[10] = 1.4123
+    weight[11] =  4.6438
+    weight[12] = 41.9124	
+    weight[13] = 0.8077	
+    weight[14] = 21.1285	
+    weight[15] = 24.0125
+    weight[16] = 24.2633
+    weight[17] = 57.3114	
+    weight[18] = 13.6606
+    weight[19] = 0
+    return weight
 def train_wrapper(args, model, enc=False): 
     assert os.path.exists("../dataset/Cityscapes"), "Error: datadir (dataset directory) could not be loaded"
     assert os.path.exists("../dataset/CamVid"), "Error: datadir (dataset directory) could not be loaded"
@@ -92,12 +126,36 @@ def train_wrapper(args, model, enc=False):
     dataset_train_camvid = camvid("../dataset/CamVid", co_transform, 'train')
     dataset_val_camvid= camvid("../dataset/CamVid", co_transform_val, 'val')
 
+    if args.resume:
+        #Must load weights, optimizer, epoch and best value. 
+        if enc:
+            filenameCheckpoint = '../trained_models/erfnet_encoder_pretrained.pth.tar'
+        else:
+            filenameCheckpoint = "../trained_models/erfnet_pretrained.pth"
 
-    weight = init_weight(enc)
+        assert os.path.exists(filenameCheckpoint), "Error: resume option was used but checkpoint was not found in folder"
+        def load_my_state_dict(model, state_dict):  #custom function to load model when not all dict elements
+            own_state = model.state_dict()
+            for name, param in state_dict.items():
+                if name not in own_state:
+                    if name.startswith("module."):
+                        own_state[name.split("module.")[-1]].copy_(param)
+                    else:
+                        print(name, " not loaded")
+                        continue
+                else:
+                    own_state[name].copy_(param)
+            return model
+
+        model = load_my_state_dict(model, torch.load(filenameCheckpoint, map_location=lambda storage, loc: storage))
+        print("=> Loaded Model)")
+
+    weight = init_weight_2(enc)
     model = train(args, model, weight, dataset_train_cityscapes, dataset_val_cityscapes,enc)
-    new_weight = list(model.parameters())
-    new_weight =new_weight[-1].detach().cpu()
-    model = train(args, model, new_weight, dataset_train_camvid, dataset_val_camvid,enc)
+    #new_weight = list(model.parameters())
+    #new_weight =new_weight[-1].detach().cpu()
+    weight = torch.tensor(calculate_weights(dataset_train_camvid))
+    model = train(args, model, weight, dataset_train_camvid, dataset_val_camvid,enc)
 
 
 def init_weight(enc):
@@ -148,29 +206,8 @@ def init_weight(enc):
 def train(args, model, weight,dataset_train,dataset_val, enc=False):
     best_acc = 0
 
-    #TODO: calculate weights by processing dataset histogram (now its being set by hand from the torch values)
-    #create a loder to run all images and calculate histogram of labels, then create weight array using class balancing
-    #print(weight)
   
-        #weight = torch.ones(NUM_CLASSES)
-        #for i in range(0,20):
-            
-    '''if weight == None:
-        if (enc):
-            filename = f'{savedir}/model_encoder-{epoch:03}.pth'
-            filenamebest = f'{savedir}/model_encoder_best.pth'
-        else:
-            filename = f'{savedir}/model-{epoch:03}.pth'
-            filenamebest = f'{savedir}/model_best.pth'
 
-        assert os.path.exists(filenameBest), "Error: resume option was used but checkpoint was not found in folder"
-        checkpoint = torch.load(filenameBest)
-        start_epoch = checkpoint['epoch']
-        model.load_state_dict(checkpoint['state_dict'])
-        optimizer.load_state_dict(checkpoint['optimizer'])
-        best_acc = checkpoint['best_acc']
-        print("=> Loaded checkpoint at epoch {})".format(checkpoint['epoch']))
-    ''' 
     loader = DataLoader(dataset_train, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=True)
     loader_val = DataLoader(dataset_val, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=False)
 
@@ -205,21 +242,7 @@ def train(args, model, weight,dataset_train,dataset_val, enc=False):
 
     start_epoch = 1
 
-    if args.resume:
-        #Must load weights, optimizer, epoch and best value. 
-        if enc:
-            filenameCheckpoint = savedir + '/checkpoint_enc.pth.tar'
-        else:
-            filenameCheckpoint = savedir + '/checkpoint.pth.tar'
-
-        assert os.path.exists(filenameCheckpoint), "Error: resume option was used but checkpoint was not found in folder"
-        checkpoint = torch.load(filenameCheckpoint)
-        start_epoch = checkpoint['epoch']
-        model.load_state_dict(checkpoint['state_dict'])
-        optimizer.load_state_dict(checkpoint['optimizer'])
-        best_acc = checkpoint['best_acc']
-        print("=> Loaded checkpoint at epoch {})".format(checkpoint['epoch']))
-
+ 
     #scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5) # set up scheduler     ## scheduler 1
     lambda1 = lambda epoch: pow((1-((epoch-1)/args.num_epochs)),0.9)  ## scheduler 2
     scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda1)                             ## scheduler 2
@@ -514,7 +537,7 @@ def main(args):
         if args.cuda:
             model = torch.nn.DataParallel(model).cuda()
         #When loading encoder reinitialize weights for decoder because they are set to 0 when training dec
-    model = train(args, model, False)   #Train decoder
+    model = train_wrapper(args, model, False)   #Train decoder
     print("========== TRAINING FINISHED ===========")
 
 if __name__ == '__main__':

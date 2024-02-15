@@ -82,23 +82,7 @@ class CrossEntropyLoss2d(torch.nn.Module):
     def forward(self, outputs, targets):
         return self.loss(torch.nn.functional.log_softmax(outputs, dim=1), targets)
 
-def train_wrapper(args, model, enc=False): 
-    assert os.path.exists("../dataset/Cityscapes"), "Error: datadir (dataset directory) could not be loaded"
-    assert os.path.exists("../dataset/CamVid"), "Error: datadir (dataset directory) could not be loaded"
-    co_transform = MyCoTransform(enc, augment=True, height=args.height)#1024)
-    co_transform_val = MyCoTransform(enc, augment=False, height=args.height)#1024)
-    dataset_train_cityscapes = cityscapes("../dataset/Cityscapes", co_transform, 'train')
-    dataset_val_cityscapes = cityscapes("../dataset/Cityscapes", co_transform_val, 'val')
-    dataset_train_camvid = camvid("../dataset/CamVid", co_transform, 'train')
-    dataset_val_camvid= camvid("../dataset/CamVid", co_transform_val, 'val')
 
-
-    weight = init_weight(enc)
-    model = train(args, model, weight, dataset_train_cityscapes, dataset_val_cityscapes,enc)
-    return model
-    #new_weight = list(model.parameters())
-    #new_weight =new_weight[-1].detach().cpu()
-    #model = train(args, model, new_weight, dataset_train_camvid, dataset_val_camvid,enc)
 
 
 def init_weight(enc):
@@ -146,6 +130,17 @@ def init_weight(enc):
 
     weight[19] = 1
     return weight
+
+def train_wrapper(args, model, enc=False): 
+    assert os.path.exists("../dataset/Cityscapes"), "Error: datadir (dataset directory) could not be loaded"
+    co_transform = MyCoTransform(enc, augment=True, height=args.height)#1024)
+    co_transform_val = MyCoTransform(enc, augment=False, height=args.height)#1024)
+    dataset_train_cityscapes = cityscapes("../dataset/Cityscapes", co_transform, 'train')
+    dataset_val_cityscapes = cityscapes("../dataset/Cityscapes", co_transform_val, 'val')
+
+    weight = init_weight(enc)
+    model = train(args, model, weight, dataset_train_cityscapes, dataset_val_cityscapes,enc)
+
 def train(args, model, weight,dataset_train,dataset_val, enc=False):
     best_acc = 0
 
@@ -275,7 +270,7 @@ def train(args, model, weight,dataset_train,dataset_val, enc=False):
                 labels = labels.cuda()
 
             inputs = Variable(images)
-            #labels = torch.where(labels == 19, 1, 0)
+            #abels = torch.where(labels == 19, 1, 0)
             targets = Variable(labels)
 
             outputs = model(inputs, only_encode=enc)

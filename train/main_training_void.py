@@ -83,7 +83,40 @@ class CrossEntropyLoss2d(torch.nn.Module):
         return self.loss(torch.nn.functional.log_softmax(outputs, dim=1), targets)
 
 
+def calculate_weights(dataset):
+      label_counts = torch.zeros(NUM_CLASSES)
+      for data in dataset:
+          _, labels = data
+          label_counts += torch.bincount(labels.flatten(), minlength=NUM_CLASSES)
 
+      total_samples = sum(label_counts)
+      weights = total_samples / (label_counts * NUM_CLASSES )
+
+      return weights
+    
+def init_weight_2(enc):
+    weight = torch.ones(NUM_CLASSES)
+    weight[0] = 0.1524
+    weight[1] = 0.9292	
+    weight[2] = 0.2480	
+    weight[3] = 8.6231
+    weight[4] =  6.4398
+    weight[5] =  4.6060
+    weight[6] = 27.1154
+    weight[7] = 10.2248
+    weight[8] = 0.3554	
+    weight[9] = 4.8813	
+    weight[10] = 1.4123
+    weight[11] =  4.6438
+    weight[12] = 41.9124	
+    weight[13] = 0.8077	
+    weight[14] = 21.1285	
+    weight[15] = 24.0125
+    weight[16] = 24.2633
+    weight[17] = 57.3114	
+    weight[18] = 13.6606
+    weight[19] = 1
+    return weight
 
 def init_weight(enc):
     weight = torch.ones(NUM_CLASSES)
@@ -128,7 +161,7 @@ def init_weight(enc):
         weight[17] = 10.405355453491	
         weight[18] = 10.138095855713	
 
-    weight[19] = 0
+    weight[19] = 1
     return weight
 
 def train_wrapper(args, model, enc=False): 
@@ -138,7 +171,9 @@ def train_wrapper(args, model, enc=False):
     dataset_train_cityscapes = cityscapes("../dataset/Cityscapes", co_transform, 'train')
     dataset_val_cityscapes = cityscapes("../dataset/Cityscapes", co_transform_val, 'val')
 
-    weight = init_weight(enc)
+    weight = init_weight_2(enc)
+    #weights = torch.tensor(calculate_weights(dataset_train_cityscapes))
+    #print(weights)
     model = train(args, model, weight, dataset_train_cityscapes, dataset_val_cityscapes,enc)
 
 def train(args, model, weight,dataset_train,dataset_val, enc=False):
