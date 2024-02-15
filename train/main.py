@@ -149,7 +149,7 @@ def train_wrapper(args, model, enc=False):
 
         model = load_my_state_dict(model, torch.load(filenameCheckpoint, map_location=lambda storage, loc: storage))
         print("=> Loaded Model)")
-
+    
     weight = init_weight_2(enc)
     model = train(args, model, weight, dataset_train_cityscapes, dataset_val_cityscapes,enc)
     #new_weight = list(model.parameters())
