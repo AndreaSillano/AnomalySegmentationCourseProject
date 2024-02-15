@@ -133,10 +133,13 @@ class camvid(Dataset):
 
         if self.co_transform is not None:
             image, label = self.co_transform(image, label)
+        max_i = label.shape[1]    
+        max_j = label.shape[2] 
 
-        for i in range(0, label.shape[1]):
-          for j in range (0, label.shape[2]):
-            rgb =  label[:,i,j].tolist()
+        print(max_i)  
+        for i in range(0, max_i):
+          for j in range (0,max_j):
+            rgb =  label[:,i,j].tolist()[0]
             label[:,i,j] = classmapping.get_label_cityscapes((rgb[0],rgb[1],rgb[2]))
         return image, label
 
