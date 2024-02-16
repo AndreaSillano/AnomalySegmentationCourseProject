@@ -136,7 +136,6 @@ class camvid(Dataset):
         max_i = label.shape[1]    
         max_j = label.shape[2] 
 
-        print(max_i)  
         for i in range(0, max_i):
           for j in range (0,max_j):
             rgb =  label[:,i,j].tolist()[0]
