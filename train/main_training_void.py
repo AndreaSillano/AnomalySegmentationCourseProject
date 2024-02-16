@@ -357,7 +357,7 @@ def train(args, model, weight,dataset_train,dataset_val, enc=False):
             #outputs = torch.where(outputs == 19, 1, 0)
             #print(output_void[0,0,:,: ])
 
-          #sostituisci tutti i valori sotto 19 in 0 e sostituisci quelli a 19 in 1
+            #sostituisci tutti i valori sotto 19 in 0 e sostituisci quelli a 19 in 1
             #print(labels[0,0,:,: ])
             
 
@@ -365,6 +365,7 @@ def train(args, model, weight,dataset_train,dataset_val, enc=False):
            
             #print("targets", np.unique(targets[:, 0].cpu().data.numpy()))
             #print(targets[:, 0])
+            
             optimizer.zero_grad()
             loss = criterion(outputs, targets[:, 0])
             print(loss.item())
