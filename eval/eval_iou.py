@@ -98,12 +98,16 @@ def main(args):
           iouEvalVal.addBatch(predicted_labels, labels)
 
         elif args.discriminant == 'maxentropy':
-            max_entropy = (-torch.sum(torch.nn.functional.softmax(outputs.squeeze(0), dim=0) * torch.nn.functional.log_softmax(outputs.squeeze(0), dim=0), dim=0))
-            max_entropy = torch.div(max_entropy, torch.log(torch.tensor(outputs.shape[1])))
-            anomaly_result = max_entropy.data.cpu().numpy()          
-            _, predicted_labels = anomaly_result.max(1, keepdim=True)
+            softmax_output = F.softmax(outputs, dim=1)
+            entropy = -torch.sum(softmax_output * torch.log(softmax_output), dim=1, keepdim=True)
+            max_entropy = torch.div(entropy, torch.log(torch.tensor(outputs.shape[1])))
+            
+            #print(outputs.shape[1])#anomaly_result = max_entropy.data#.cpu().numpy() 
+            #print(max_entropy)         
+            
+            _, predicted_labels = max_entropy.max(1,keepdim=True)
+          
             iouEvalVal.addBatch(predicted_labels, labels)
-
         elif args.discriminant == 'maxlogit':
           _, predicted_labels = outputs.max(1, keepdim=True)
           iouEvalVal.addBatch(predicted_labels, labels)
