@@ -9,6 +9,7 @@ import time
 import numpy as np
 import torch
 import math
+from utils import LogitNormLoss
 
 from PIL import Image, ImageOps
 from argparse import ArgumentParser
@@ -71,71 +72,6 @@ class MyCoTransform(object):
 
         return input, target
     
-class MyCoTransformCamVid(object):
-    def __init__(self, enc, augment=True, height=512):
-        self.enc=enc
-        self.augment = augment
-        self.height = height
-        pass
-    def __call__(self, input, target):
-        # do something to both images
-        input =  Resize(self.height, Image.BILINEAR)(input)
-        target = Resize(self.height, Image.NEAREST)(target)
-
-        if(self.augment):
-            # Random hflip
-            hflip = random.random()
-            if (hflip < 0.5):
-                input = input.transpose(Image.FLIP_LEFT_RIGHT)
-                target = target.transpose(Image.FLIP_LEFT_RIGHT)
-            
-            #Random translation 0-2 pixels (fill rest with padding
-            transX = random.randint(-2, 2) 
-            transY = random.randint(-2, 2)
-
-            input = ImageOps.expand(input, border=(transX,transY,0,0), fill=0)
-            target = ImageOps.expand(target, border=(transX,transY,0,0), fill=255) #pad label filling with 255
-            input = input.crop((0, 0, input.size[0]-transX, input.size[1]-transY))
-            target = target.crop((0, 0, target.size[0]-transX, target.size[1]-transY))   
-
-        input = ToTensor()(input)
-        if (self.enc):
-            target = Resize(int(self.height/8), Image.NEAREST)(target)
-        target = ToLabel()(target)
-        target = Relabel(66, 19)(target)
-        target = Relabel(121, 2)(target)
-        target = Relabel(172, 12)(target)
-        target = Relabel(58, 2)(target)
-        target = Relabel(13, 2)(target)
-        target = Relabel(119, 13)(target)
-        target = Relabel(68, 11)(target)
-        target = Relabel(140, 5)(target)
-        target = Relabel(89, 4)(target)
-        target = Relabel(157, 0)(target)
-        target = Relabel(50, 0)(target)
-        target = Relabel(158, 17)(target)
-        target = Relabel(54, 19)(target)
-        target = Relabel(143, 19)(target)
-        target = Relabel(17, 11)(target)
-        target = Relabel(127, 0)(target)
-        target = Relabel(174, 1)(target)
-        target = Relabel(154, 1)(target)
-        target = Relabel(104, 7)(target)
-        target = Relabel(132, 10)(target)
-        target = Relabel(46, 7)(target)
-        target = Relabel(128, 16)(target)
-        target = Relabel(24, 8)(target)
-        target = Relabel(176, 15)(target)
-        target = Relabel(47, 2)(target)
-        target = Relabel(38, 8)(target)
-        target = Relabel(0, 19)(target)
-        target = Relabel(35, 3)(target)
-
-
-        #target = Relabel(255, 19)(target)
-
-        return input, target
-
 
 class CrossEntropyLoss2d(torch.nn.Module):
 
@@ -184,15 +120,11 @@ def init_weight_2(enc):
     return weight
 def train_wrapper(args, model, enc=False): 
     assert os.path.exists("../dataset/Cityscapes"), "Error: datadir (dataset directory) could not be loaded"
-    assert os.path.exists("../dataset/CamVid"), "Error: datadir (dataset directory) could not be loaded"
     co_transform = MyCoTransform(enc, augment=True, height=args.height)#1024)
     co_transform_val = MyCoTransform(enc, augment=False, height=args.height)#1024)
-    co_transform_cam = MyCoTransformCamVid(enc, augment=True, height=args.height)#1024)
-    co_transform_val_cam = MyCoTransformCamVid(enc, augment=False, height=args.height)#1024)
     dataset_train_cityscapes = cityscapes("../dataset/Cityscapes", co_transform, 'train')
     dataset_val_cityscapes = cityscapes("../dataset/Cityscapes", co_transform_val, 'val')
-    dataset_train_camvid = camvid("../dataset/CamVid", co_transform_cam, 'train')
-    dataset_val_camvid= camvid("../dataset/CamVid", co_transform_val_cam, 'val')
+
 
     if args.resume:
         #Must load weights, optimizer, epoch and best value. 
@@ -222,10 +154,7 @@ def train_wrapper(args, model, enc=False):
     model = train(args, model, weight, dataset_train_cityscapes, dataset_val_cityscapes,enc)
     #new_weight = list(model.parameters())
     #new_weight =new_weight[-1].detach().cpu()
-    
-    weight = torch.tensor(calculate_weights(dataset_train_camvid))
 
-    model = train(args, model, weight, dataset_train_camvid, dataset_val_camvid,enc)
 
 
 def init_weight(enc):
@@ -281,8 +210,14 @@ def train(args, model, weight,dataset_train,dataset_val, enc=False):
     loader = DataLoader(dataset_train, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=True)
     loader_val = DataLoader(dataset_val, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=False)
 
+    #Loss Setup
     if args.cuda:
         weight = weight.cuda()
+
+    if args.customloss == 'LogitNorm':
+        normLoss = LogitNormLoss(weight)
+            
+
     criterion = CrossEntropyLoss2d(weight)
     print(type(criterion))
 
@@ -338,6 +273,7 @@ def train(args, model, weight,dataset_train,dataset_val, enc=False):
         for param_group in optimizer.param_groups:
             print("LEARNING RATE: ", param_group['lr'])
             usedLr = float(param_group['lr'])
+        
 
         model.train()
         for step, (images, labels) in enumerate(loader):
@@ -358,12 +294,20 @@ def train(args, model, weight,dataset_train,dataset_val, enc=False):
             #print("targets", np.unique(targets[:, 0].cpu().data.numpy()))
             #print(targets[:, 0])
             optimizer.zero_grad()
+            if args.customloss == 'LogitNorm':
+                custom_loss = normLoss(outputs,targets[:,0])
+
+
             loss = criterion(outputs, targets[:, 0])
-            print(loss.item())
+            print("Criterion Loss: ", loss.item())
+            print("Criterion Loss: ", loss.item())
+
             loss.backward()
+            custom_loss.backward()
             optimizer.step()
 
             epoch_loss.append(loss.item())
+            epoch_loss.append(custom_loss.item())
             time_train.append(time.time() - start_time)
 
             if (doIouTrain):
@@ -633,6 +577,9 @@ if __name__ == '__main__':
     parser.add_argument('--iouTrain', action='store_true', default=False) #recommended: False (takes more time to train otherwise)
     parser.add_argument('--iouVal', action='store_true', default=True)  
     parser.add_argument('--resume', action='store_true')    #Use this flag to load last checkpoint for training  
+    parser.add_argument('--customloss',default=None)    #Use this flag to load last checkpoint for training  
+
+    
 
     
     main(parser.parse_args())
