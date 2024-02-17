@@ -292,22 +292,20 @@ def train(args, model, weight,dataset_train,dataset_val, enc=False):
             inputs = Variable(images)
             targets = Variable(labels)
             outputs = model(inputs, only_encode=enc)
-
             #print("targets", np.unique(targets[:, 0].cpu().data.numpy()))
             #print(targets[:, 0])
             optimizer.zero_grad()
-            if not args.onlyoustum:
+            if not args.onlycustom:
                 loss = criterion(outputs, targets[:, 0])
                 loss.backward()
                 print("Criterion Loss: ", loss.item())
                 epoch_loss.append(loss.item())
-            else:
-                if args.customloss == 'LogitNorm':
-                    custom_loss = normLoss(outputs,targets[:,0])
+            
+            if args.customloss == 'LogitNorm':
+                custom_loss = normLoss(outputs,targets[:,0])
 
-                
                 custom_loss.backward()
-                print("Criterion Loss: ", loss.item())
+                print("Criterion Custom Loss: ",custom_loss.item())
                 epoch_loss.append(custom_loss.item())
 
             optimizer.step()
