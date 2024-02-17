@@ -9,7 +9,7 @@ import time
 import numpy as np
 import torch
 import math
-from utils import LogitNormLoss
+from utils import LogitNormLoss, IsoMaxPlusLoss
 
 from PIL import Image, ImageOps
 from argparse import ArgumentParser
@@ -216,8 +216,10 @@ def train(args, model, weight,dataset_train,dataset_val, enc=False):
 
     if args.customloss == 'LogitNorm':
         normLoss = LogitNormLoss(weight)
+    if args.customloss == 'IsoMax':
+        isoLoss = IsoMaxPlusLoss()
     
-    if args.customloss == None and args.onlycostum: 
+    if args.customloss == None and args.onlycustom: 
         raise ValueError("Please select a custom loss")
 
     criterion = CrossEntropyLoss2d(weight)
@@ -295,18 +297,31 @@ def train(args, model, weight,dataset_train,dataset_val, enc=False):
             #print("targets", np.unique(targets[:, 0].cpu().data.numpy()))
             #print(targets[:, 0])
             optimizer.zero_grad()
-            if not args.onlycustom:
+
+            if not args.onlycustom and args.customloss != None:
                 loss = criterion(outputs, targets[:, 0])
-                loss.backward()
+                loss.backward(retain_graph=True)
                 print("Criterion Loss: ", loss.item())
                 epoch_loss.append(loss.item())
             
             if args.customloss == 'LogitNorm':
                 custom_loss = normLoss(outputs,targets[:,0])
 
-                custom_loss.backward()
+                custom_loss.backward(retain_graph=True)
                 print("Criterion Custom Loss: ",custom_loss.item())
                 epoch_loss.append(custom_loss.item())
+            if args.customloss == 'IsoMax':
+                custom_loss = isoLoss(outputs,targets[:,0])
+                custom_loss.backward(retain_graph=True)
+                print("Criterion Custom Loss: ",custom_loss.item())
+                epoch_loss.append(custom_loss.item())
+
+            #default
+            if args.customloss == None:
+              loss = criterion(outputs, targets[:, 0])
+              loss.backward()
+              print("Loss: ", loss.item())
+              epoch_loss.append(loss.item())
 
             optimizer.step()
             time_train.append(time.time() - start_time)
@@ -368,8 +383,30 @@ def train(args, model, weight,dataset_train,dataset_val, enc=False):
             outputs = model(inputs, only_encode=enc) 
             
 
-            loss = criterion(outputs, targets[:, 0])
-            epoch_loss_val.append(loss.item())
+            if not args.onlycustom and args.customloss != None:
+                loss = criterion(outputs, targets[:, 0])
+                loss.backward(retain_graph=True)
+                print("Criterion Loss: ", loss.item())
+                epoch_loss_val.append(loss.item())
+            
+            if args.customloss == 'LogitNorm':
+                custom_loss = normLoss(outputs,targets[:,0])
+
+                custom_loss.backward(retain_graph=True)
+                print("Criterion Custom Loss: ",custom_loss.item())
+                epoch_loss_val.append(custom_loss.item())
+            if args.customloss == 'IsoMax':
+                custom_loss = isoLoss(outputs,targets[:,0])
+                custom_loss.backward(retain_graph=True)
+                print("Criterion Custom Loss: ",custom_loss.item())
+                epoch_loss_val.append(custom_loss.item())
+
+            #default
+            if args.customloss == None:
+              loss = criterion(outputs, targets[:, 0])
+              loss.backward()
+              print("Loss: ", loss.item())
+              epoch_loss_val.append(loss.item())
             time_val.append(time.time() - start_time)
 
 
