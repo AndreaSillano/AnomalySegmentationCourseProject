@@ -70,6 +70,71 @@ class MyCoTransform(object):
         target = Relabel(255, 19)(target)
 
         return input, target
+    
+class MyCoTransformCamVid(object):
+    def __init__(self, enc, augment=True, height=512):
+        self.enc=enc
+        self.augment = augment
+        self.height = height
+        pass
+    def __call__(self, input, target):
+        # do something to both images
+        input =  Resize(self.height, Image.BILINEAR)(input)
+        target = Resize(self.height, Image.NEAREST)(target)
+
+        if(self.augment):
+            # Random hflip
+            hflip = random.random()
+            if (hflip < 0.5):
+                input = input.transpose(Image.FLIP_LEFT_RIGHT)
+                target = target.transpose(Image.FLIP_LEFT_RIGHT)
+            
+            #Random translation 0-2 pixels (fill rest with padding
+            transX = random.randint(-2, 2) 
+            transY = random.randint(-2, 2)
+
+            input = ImageOps.expand(input, border=(transX,transY,0,0), fill=0)
+            target = ImageOps.expand(target, border=(transX,transY,0,0), fill=255) #pad label filling with 255
+            input = input.crop((0, 0, input.size[0]-transX, input.size[1]-transY))
+            target = target.crop((0, 0, target.size[0]-transX, target.size[1]-transY))   
+
+        input = ToTensor()(input)
+        if (self.enc):
+            target = Resize(int(self.height/8), Image.NEAREST)(target)
+        target = ToLabel()(target)
+        target = Relabel(66, 19)(target)
+        target = Relabel(121, 2)(target)
+        target = Relabel(172, 12)(target)
+        target = Relabel(58, 2)(target)
+        target = Relabel(13, 2)(target)
+        target = Relabel(119, 13)(target)
+        target = Relabel(68, 11)(target)
+        target = Relabel(140, 5)(target)
+        target = Relabel(89, 4)(target)
+        target = Relabel(157, 0)(target)
+        target = Relabel(50, 0)(target)
+        target = Relabel(158, 17)(target)
+        target = Relabel(54, 19)(target)
+        target = Relabel(143, 19)(target)
+        target = Relabel(17, 11)(target)
+        target = Relabel(127, 0)(target)
+        target = Relabel(174, 1)(target)
+        target = Relabel(154, 1)(target)
+        target = Relabel(104, 7)(target)
+        target = Relabel(132, 10)(target)
+        target = Relabel(46, 7)(target)
+        target = Relabel(128, 16)(target)
+        target = Relabel(24, 8)(target)
+        target = Relabel(176, 15)(target)
+        target = Relabel(47, 2)(target)
+        target = Relabel(38, 8)(target)
+        target = Relabel(0, 19)(target)
+        target = Relabel(35, 3)(target)
+
+
+        #target = Relabel(255, 19)(target)
+
+        return input, target
 
 
 class CrossEntropyLoss2d(torch.nn.Module):
@@ -122,10 +187,12 @@ def train_wrapper(args, model, enc=False):
     assert os.path.exists("../dataset/CamVid"), "Error: datadir (dataset directory) could not be loaded"
     co_transform = MyCoTransform(enc, augment=True, height=args.height)#1024)
     co_transform_val = MyCoTransform(enc, augment=False, height=args.height)#1024)
+    co_transform_cam = MyCoTransformCamVid(enc, augment=True, height=args.height)#1024)
+    co_transform_val_cam = MyCoTransformCamVid(enc, augment=False, height=args.height)#1024)
     dataset_train_cityscapes = cityscapes("../dataset/Cityscapes", co_transform, 'train')
     dataset_val_cityscapes = cityscapes("../dataset/Cityscapes", co_transform_val, 'val')
-    dataset_train_camvid = camvid("../dataset/CamVid", co_transform, 'train')
-    dataset_val_camvid= camvid("../dataset/CamVid", co_transform_val, 'val')
+    dataset_train_camvid = camvid("../dataset/CamVid", co_transform_cam, 'train')
+    dataset_val_camvid= camvid("../dataset/CamVid", co_transform_val_cam, 'val')
 
     if args.resume:
         #Must load weights, optimizer, epoch and best value. 

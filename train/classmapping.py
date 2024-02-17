@@ -1,3 +1,7 @@
+import PIL
+import numpy as np
+from PIL import Image
+import os
 rgb_to_class_mapping = { 
     (64, 128, 64): ('Animal', 0, 19), 
     (192, 0, 128): ('Archway', 1, 2), 
@@ -32,9 +36,28 @@ rgb_to_class_mapping = {
     (0, 0, 0): ('Void', 30,19), 
     (64, 192, 0): ('Wall', 31,3) 
 }
+def create_image_from_rgb():
+  #l = [[[64, 128, 64], [192, 0, 128],[0, 128, 192], [0, 128, 64],[128, 0, 0], [64, 0, 128], [64, 0, 192],[192, 128, 64],[192, 192, 128],[64, 64, 128],[128, 0, 192],
+  #      [192, 128, 64],[192, 192, 128],[64, 64, 128],[128, 0, 192],[192, 0, 64],[128, 128, 64],[192, 0, 192],[128, 64, 64],[64, 192, 128],
+  #      [128, 128, 128],[64, 128, 192],[0, 0, 64],[0, 64, 64],[192, 64, 128],[64, 0, 64],[192, 192, 0],[0, 0, 0],[64, 192, 0]]]
+  l = [list(rgb) for rgb in rgb_to_class_mapping.keys()]
+  l =[l]
+  image_array = np.array(l, dtype=np.uint8)
+  img = PIL.Image.fromarray(image_array)
+  img.show()
+  img.save("ClassPalette.png") 
 
 def get_label_cityscapes(rgb)->int:
     if (rgb[0], rgb[1],rgb[2]) in rgb_to_class_mapping:
       return rgb_to_class_mapping[(rgb[0], rgb[1],rgb[2])][2]
     else: 
       return 19
+
+def get_palette():
+    with open("ClassPalette.png", "rb") as f:
+            image = Image.open(f).convert('P')
+    print(np.array(image).shape)
+  
+
+#create_image_from_rgb()
+get_palette()
