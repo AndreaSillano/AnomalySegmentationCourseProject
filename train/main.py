@@ -216,7 +216,9 @@ def train(args, model, weight,dataset_train,dataset_val, enc=False):
 
     if args.customloss == 'LogitNorm':
         normLoss = LogitNormLoss(weight)
-            
+    
+    if args.customloss == None and args.onlycostum: 
+        raise ValueError("Please select a custom loss")
 
     criterion = CrossEntropyLoss2d(weight)
     print(type(criterion))
@@ -294,20 +296,21 @@ def train(args, model, weight,dataset_train,dataset_val, enc=False):
             #print("targets", np.unique(targets[:, 0].cpu().data.numpy()))
             #print(targets[:, 0])
             optimizer.zero_grad()
-            if args.customloss == 'LogitNorm':
-                custom_loss = normLoss(outputs,targets[:,0])
+            if not args.onlyoustum:
+                loss = criterion(outputs, targets[:, 0])
+                loss.backward()
+                print("Criterion Loss: ", loss.item())
+                epoch_loss.append(loss.item())
+            else:
+                if args.customloss == 'LogitNorm':
+                    custom_loss = normLoss(outputs,targets[:,0])
 
+                
+                custom_loss.backward()
+                print("Criterion Loss: ", loss.item())
+                epoch_loss.append(custom_loss.item())
 
-            loss = criterion(outputs, targets[:, 0])
-            print("Criterion Loss: ", loss.item())
-            print("Criterion Loss: ", loss.item())
-
-            loss.backward()
-            custom_loss.backward()
             optimizer.step()
-
-            epoch_loss.append(loss.item())
-            epoch_loss.append(custom_loss.item())
             time_train.append(time.time() - start_time)
 
             if (doIouTrain):
@@ -577,8 +580,8 @@ if __name__ == '__main__':
     parser.add_argument('--iouTrain', action='store_true', default=False) #recommended: False (takes more time to train otherwise)
     parser.add_argument('--iouVal', action='store_true', default=True)  
     parser.add_argument('--resume', action='store_true')    #Use this flag to load last checkpoint for training  
-    parser.add_argument('--customloss',default=None)    #Use this flag to load last checkpoint for training  
-
+    parser.add_argument('--customloss',default=None)      
+    parser.add_argument('--onlycustom',action='store_true')    
     
 
     
