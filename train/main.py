@@ -307,7 +307,7 @@ def train(args, model, weight,dataset_train,dataset_val, enc=False):
                 if args.focal:
                     print("Criterion Focal Loss: ", loss.item())
                 else:
-                    print("Criterion Focal Loss: ", loss.item())
+                    print("Criterion Cross Loss: ", loss.item())
                 epoch_loss.append(loss.item())
             
             if args.customloss == 'LogitNorm':
@@ -395,7 +395,7 @@ def train(args, model, weight,dataset_train,dataset_val, enc=False):
                 if args.focal:
                     print("Criterion Focal Loss: ", loss.item())
                 else:
-                    print("Criterion Focal Loss: ", loss.item())
+                    print("Criterion Cross Loss: ", loss.item())
                 epoch_loss_val.append(loss.item())
             
             if args.customloss == 'LogitNorm':
@@ -523,7 +523,7 @@ def main(args):
     model_file = importlib.import_module(args.model)
     if args.customloss == "IsoMax":
         assert os.path.exists(args.model + "IsoMax.py"), "Error: model definition not found"
-        model_file = importlib.import_module(args.model)
+        model_file = importlib.import_module(args.model+ "IsoMax")
     model = model_file.Net(NUM_CLASSES)
     copyfile(args.model + ".py", savedir + '/' + args.model + ".py")
     
@@ -621,7 +621,7 @@ if __name__ == '__main__':
     parser.add_argument('--epochs-save', type=int, default=0)    #You can use this value to save model every X epochs
     parser.add_argument('--savedir', required=True)
     parser.add_argument('--decoder', action='store_true')
-    parser.add_argument('--pretrainedEncoder') #, default="../trained_models/erfnet_encoder_pretrained.pth.tar")
+    parser.add_argument('--pretrainedEncoder') #, default="../trained_models/ _encoder_pretrained.pth.tar")
     parser.add_argument('--visualize', action='store_true')
 
     parser.add_argument('--iouTrain', action='store_true', default=False) #recommended: False (takes more time to train otherwise)
