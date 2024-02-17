@@ -9,7 +9,7 @@ import time
 import numpy as np
 import torch
 import math
-from utils import LogitNormLoss, IsoMaxPlusLoss
+from utils import LogitNormLoss, IsoMaxPlusLoss, FocalLoss
 
 from PIL import Image, ImageOps
 from argparse import ArgumentParser
@@ -222,7 +222,10 @@ def train(args, model, weight,dataset_train,dataset_val, enc=False):
     if args.customloss == None and args.onlycustom: 
         raise ValueError("Please select a custom loss")
 
-    criterion = CrossEntropyLoss2d(weight)
+    if args.focal == 'FocalLoss':
+        criterion = FocalLoss()
+    else:
+        criterion = CrossEntropyLoss2d(weight)
     print(type(criterion))
 
     savedir = f'../save/{args.savedir}'
@@ -301,19 +304,22 @@ def train(args, model, weight,dataset_train,dataset_val, enc=False):
             if not args.onlycustom and args.customloss != None:
                 loss = criterion(outputs, targets[:, 0])
                 loss.backward(retain_graph=True)
-                print("Criterion Loss: ", loss.item())
+                if args.focal:
+                    print("Criterion Focal Loss: ", loss.item())
+                else:
+                    print("Criterion Focal Loss: ", loss.item())
                 epoch_loss.append(loss.item())
             
             if args.customloss == 'LogitNorm':
                 custom_loss = normLoss(outputs,targets[:,0])
 
                 custom_loss.backward(retain_graph=True)
-                print("Criterion Custom Loss: ",custom_loss.item())
+                print("Criterion LogitNorm Loss: ",custom_loss.item())
                 epoch_loss.append(custom_loss.item())
             if args.customloss == 'IsoMax':
                 custom_loss = isoLoss(outputs,targets[:,0])
                 custom_loss.backward(retain_graph=True)
-                print("Criterion Custom Loss: ",custom_loss.item())
+                print("Criterion IsoMax Loss: ",custom_loss.item())
                 epoch_loss.append(custom_loss.item())
 
             #default
@@ -386,7 +392,10 @@ def train(args, model, weight,dataset_train,dataset_val, enc=False):
             if not args.onlycustom and args.customloss != None:
                 loss = criterion(outputs, targets[:, 0])
                 loss.backward(retain_graph=True)
-                print("Criterion Loss: ", loss.item())
+                if args.focal:
+                    print("Criterion Focal Loss: ", loss.item())
+                else:
+                    print("Criterion Focal Loss: ", loss.item())
                 epoch_loss_val.append(loss.item())
             
             if args.customloss == 'LogitNorm':
@@ -617,7 +626,8 @@ if __name__ == '__main__':
     parser.add_argument('--resume', action='store_true')    #Use this flag to load last checkpoint for training  
     parser.add_argument('--customloss',default=None)      
     parser.add_argument('--onlycustom',action='store_true')    
-    
+    parser.add_argument('--focal',action='store_true')    
+
 
     
     main(parser.parse_args())
