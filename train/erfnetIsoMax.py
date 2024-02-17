@@ -82,7 +82,7 @@ class Encoder(nn.Module):
             self.layers.append(non_bottleneck_1d(128, 0.3, 16))
 
         #Only in encoder mode:
-        self.output_conv = nn.Conv2d(128, num_classes, 1, stride=1, padding=0, bias=True)
+        self.output_conv =IsoMaxPlusLossFirstPart(128)# nn.Conv2d(128, num_classes, 1, stride=1, padding=0, bias=True)
 
     def forward(self, input, predict=False):
         output = self.initial_block(input)
