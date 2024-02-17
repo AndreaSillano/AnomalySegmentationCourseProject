@@ -51,7 +51,7 @@ class LogitNormLoss(nn.Module):
     
 class IsoMaxPlusLossFirstPart(nn.Module):
     """This part replaces the model classifier output layer nn.Linear()"""
-    def __init__(self, num_features, num_classes, temperature=1.0):
+    def __init__(self, num_features, num_classes =NUM_CLASSES, temperature=1.0):
         super(IsoMaxPlusLossFirstPart, self).__init__()
         self.num_features = num_features
         self.num_classes = num_classes
@@ -81,8 +81,8 @@ class IsoMaxPlusLoss(nn.Module):
         """Therefore, nn.CrossEntropyLoss() must not be used to calculate the loss"""
         #############################################################################
         #############################################################################
-        last_layer = IsoMaxPlusLossFirstPart(logits.size(1), NUM_CLASSES)
-        logits = last_layer.forward(logits)
+        #last_layer = IsoMaxPlusLossFirstPart(logits.size(1), NUM_CLASSES)
+        #logits = last_layer.forward(logits)
         
         distances = -logits
         probabilities_for_training = nn.Softmax(dim=1)(-self.entropic_scale * distances)
