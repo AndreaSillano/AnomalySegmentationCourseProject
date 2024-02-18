@@ -152,7 +152,25 @@ def main(args):
             else: 
               outputs = model(inputs)
 
-        iouEvalVal.addBatch(outputs.max(1)[1].unsqueeze(1).data, labels)
+        if args.discriminant == 'msp':
+          softmax_output = F.softmax(outputs/float(args.temperature), dim=1)
+          _, predicted_labels = softmax_output.max(1, keepdim=True)
+          iouEvalVal.addBatch(predicted_labels, labels)
+
+        elif args.discriminant == 'maxentropy':
+            softmax_output = F.softmax(outputs, dim=1)
+            entropy = -torch.sum(softmax_output * torch.log(softmax_output), dim=1, keepdim=True)
+            max_entropy = torch.div(entropy, torch.log(torch.tensor(outputs.shape[1])))
+
+            _, predicted_labels = max_entropy.max(1,keepdim=True)
+
+            iouEvalVal.addBatch(predicted_labels, labels)
+        elif args.discriminant == 'maxlogit':
+          _, predicted_labels = outputs.max(1, keepdim=True)
+          iouEvalVal.addBatch(predicted_labels, labels)
+
+        else:
+          iouEvalVal.addBatch(outputs.max(1)[1].unsqueeze(1).data, labels)
         filenameSave = filename[0].split("leftImg8bit/")[1] 
 
        #print (step, filenameSave)
