@@ -140,7 +140,7 @@ def train_wrapper(args, model, enc=False):
             for name, param in state_dict.items():
                 if name not in own_state:
                     
-                    if  args.customloss != 'IsoMax' or (args.customloss == 'IsoMax' and 'output_conv' not in name):
+                    #if  args.customloss != 'IsoMax' or (args.customloss == 'IsoMax' and 'output_conv' not in name):
                       if name.startswith("module."):
                           own_state[name.split("module.")[-1]].copy_(param)
                       else:
@@ -525,8 +525,9 @@ def main(args):
     assert os.path.exists(args.model + ".py"), "Error: model definition not found"
     model_file = importlib.import_module(args.model)
     if args.customloss == "IsoMax":
-        assert os.path.exists(args.model + "IsoMax.py"), "Error: model definition not found"
-        model_file = importlib.import_module(args.model+ "IsoMax")
+        #assert os.path.exists(args.model + "IsoMax.py"), "Error: model definition not found"
+        #model_file = importlib.import_module(args.model+ "IsoMax")
+        pass
     model = model_file.Net(NUM_CLASSES)
     copyfile(args.model + ".py", savedir + '/' + args.model + ".py")
     
