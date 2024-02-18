@@ -136,13 +136,16 @@ def train_wrapper(args, model, enc=False):
         assert os.path.exists(filenameCheckpoint), "Error: resume option was used but checkpoint was not found in folder"
         def load_my_state_dict(model, state_dict):  #custom function to load model when not all dict elements
             own_state = model.state_dict()
+            
             for name, param in state_dict.items():
                 if name not in own_state:
-                    if name.startswith("module."):
-                        own_state[name.split("module.")[-1]].copy_(param)
-                    else:
-                        print(name, " not loaded")
-                        continue
+                    
+                    if  args.customloss != 'IsoMax' or (args.customloss == 'IsoMax' and 'output_conv' not in name):
+                      if name.startswith("module."):
+                          own_state[name.split("module.")[-1]].copy_(param)
+                      else:
+                          print(name, " not loaded")
+                          continue
                 else:
                     own_state[name].copy_(param)
             return model

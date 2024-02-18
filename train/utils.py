@@ -62,10 +62,12 @@ class IsoMaxPlusLossFirstPart(nn.Module):
         nn.init.constant_(self.distance_scale, 1.0)
 
     def forward(self, features):
+        features =torch.transpose(features, 1,3 )
         distances = torch.abs(self.distance_scale) * torch.cdist(F.normalize(features), F.normalize(self.prototypes), p=2.0, compute_mode="donot_use_mm_for_euclid_dist")
+        distances =torch.transpose(distances, 3,1)
         logits = -distances
-        # The temperature may be calibrated after training to improve uncertainty estimation.
         return logits / self.temperature
+
 
 
 class IsoMaxPlusLoss(nn.Module):
@@ -81,11 +83,34 @@ class IsoMaxPlusLoss(nn.Module):
         """Therefore, nn.CrossEntropyLoss() must not be used to calculate the loss"""
         #############################################################################
         #############################################################################
-        #last_layer = IsoMaxPlusLossFirstPart(logits.size(1), NUM_CLASSES)
-        #logits = last_layer.forward(logits)
+
         
-        distances = -logits
+
+        '''distances = -logits
+        targets = targets.view(distances.size(0), -1)
         probabilities_for_training = nn.Softmax(dim=1)(-self.entropic_scale * distances)
         probabilities_at_targets = probabilities_for_training[range(distances.size(0)), targets]
+        loss = -torch.log(probabilities_at_targets).mean()'''
+        
+        distances = -logits
+        targets = targets.view(distances.size(0), -1)
+
+        # Softmax operation
+        probabilities_for_training = nn.Softmax(dim=1)(-self.entropic_scale * distances)
+
+        # Flatten probabilities_for_training for indexing
+        probabilities_flat = probabilities_for_training.view(distances.size(0), -1)
+
+        # Gather probabilities at target indices
+        probabilities_at_targets = probabilities_flat.gather(1, targets)
+
+        # Compute loss
         loss = -torch.log(probabilities_at_targets).mean()
         return loss
+
+
+
+
+
+
+
