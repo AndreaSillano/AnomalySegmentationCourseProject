@@ -63,7 +63,7 @@ class IsoMaxPlusLossFirstPart(nn.Module):
 
     def forward(self, features):
         features =torch.transpose(features, 1,3 )
-        distances = torch.abs(self.distance_scale) * torch.cdist(F.normalize(features), F.normalize(self.prototypes), p=2.0, compute_mode="donot_use_mm_for_euclid_dist")
+        distances = torch.abs(self.distance_scale.cuda()) * torch.cdist(F.normalize(features).cuda(), F.normalize(self.prototypes).cuda(), p=2.0, compute_mode="donot_use_mm_for_euclid_dist")
         distances =torch.transpose(distances, 3,1)
         logits = -distances
         return logits / self.temperature
@@ -92,6 +92,9 @@ class IsoMaxPlusLoss(nn.Module):
         probabilities_at_targets = probabilities_for_training[range(distances.size(0)), targets]
         loss = -torch.log(probabilities_at_targets).mean()'''
         
+        step1 = IsoMaxPlusLossFirstPart(20)
+        logits = step1.forward(logits)
+
         distances = -logits
         targets = targets.view(distances.size(0), -1)
 
@@ -107,7 +110,6 @@ class IsoMaxPlusLoss(nn.Module):
         # Compute loss
         loss = -torch.log(probabilities_at_targets).mean()
         return loss
-
 
 
 
