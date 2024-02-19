@@ -1,5 +1,9 @@
 # Real-Time-Anomaly-Segmentation [[Course Project](https://docs.google.com/document/d/1ElljsAprT2qX8RpePSQ3E00y_3oXrtN_CKYC6wqxyFQ/edit?usp=sharing)]
-This repository provides a starter-code setup for the Real-Time Anomaly Segmentation project of the Machine Learning Course. It consists of the code base for training ERFNet on the Cityscapes dataset and perform anomaly segmentation.
+In this repository you will find the code used for the anomaly segmentation project (Project 4) for the Advanced Machine Learning course, submitted for the 27/02/2024 exam date.
+Group Members:
+* s308722 - Thomas Baracco
+* s310383 - Riccardo Renda
+* s314771 - Andrea Sillano
 
 ## Packages
 For instructions, please refer to the README in each folder:
