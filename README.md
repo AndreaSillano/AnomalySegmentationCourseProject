@@ -1,6 +1,8 @@
  
 # Real-Time-Anomaly-Segmentation [[Course Project](https://docs.google.com/document/d/1ElljsAprT2qX8RpePSQ3E00y_3oXrtN_CKYC6wqxyFQ/edit?usp=sharing)]
 You can find the project report [here](https://github.com/AndreaSillano/AnomalySegmentationCourseProject/blob/main/reportAML.pdf)
+
+
 In this repository you will find the code used for the anomaly segmentation project (Project 4) for the Advanced Machine Learning course, submitted for the 27/02/2024 exam date.
 Group Members:
 * s308722 - Thomas Baracco
